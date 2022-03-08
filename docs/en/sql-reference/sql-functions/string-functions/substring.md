@@ -44,7 +44,7 @@ If len is less than 1, the result is the empty string.
 ## example
 
 ```
-mysql> select substring('abc1', -2);
+mysql> select substring('abc1', 2);
 +-----------------------------+
 | substring('abc1', 2)        |
 +-----------------------------+
