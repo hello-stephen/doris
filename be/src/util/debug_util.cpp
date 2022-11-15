@@ -82,7 +82,7 @@ std::string get_build_version(bool compact) {
        << " with BLSAN"
 #endif
 #endif
-       << " (build " << DORIS_BUILD_HASH << ")";
+       << " (build " << "alpha" << ")";
 
     if (!compact) {
         ss << std::endl << "Built on " << DORIS_BUILD_TIME << " by " << DORIS_BUILD_INFO;
@@ -92,8 +92,7 @@ std::string get_build_version(bool compact) {
 }
 
 std::string get_short_version() {
-    static std::string short_version(std::string(DORIS_BUILD_VERSION) + "-" +
-                                     DORIS_BUILD_SHORT_HASH);
+    static std::string short_version(std::string(DORIS_BUILD_VERSION));
     return short_version;
 }
 

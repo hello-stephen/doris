@@ -56,7 +56,7 @@ CONF_String(memory_mode, "performance");
 // defaults to bytes if no unit is given"
 // must larger than 0. and if larger than physical memory size,
 // it will be set to physical memory size.
-CONF_String(mem_limit, "80%");
+CONF_String(mem_limit, "95%");
 
 // the port heartbeat service used
 CONF_Int32(heartbeat_service_port, "9050");
@@ -147,7 +147,7 @@ CONF_Bool(doris_enable_scanner_thread_pool_per_disk, "true");
 // the timeout of a work thread to wait the blocking priority queue to get a task
 CONF_mInt64(doris_blocking_priority_queue_wait_timeout_ms, "500");
 // number of olap scanner thread pool size
-CONF_Int32(doris_scanner_thread_pool_thread_num, "48");
+CONF_Int32(doris_scanner_thread_pool_thread_num, "8");
 // number of olap scanner thread pool queue size
 CONF_Int32(doris_scanner_thread_pool_queue_size, "102400");
 // default thrift client connect timeout(in seconds)
@@ -231,7 +231,7 @@ CONF_Bool(enable_low_cardinality_optimize, "true");
 
 // be policy
 // whether disable automatic compaction task
-CONF_mBool(disable_auto_compaction, "false");
+CONF_mBool(disable_auto_compaction, "true");
 // whether enable vectorized compaction
 CONF_Bool(enable_vectorized_compaction, "true");
 // whether enable vectorized schema change/material-view/rollup task.
@@ -356,7 +356,7 @@ CONF_Int32(number_tablet_writer_threads, "16");
 CONF_Int32(number_slave_replica_download_threads, "64");
 
 // The maximum amount of data that can be processed by a stream load
-CONF_mInt64(streaming_load_max_mb, "10240");
+CONF_mInt64(streaming_load_max_mb, "102400");
 // Some data formats, such as JSON, cannot be streamed.
 // Therefore, it is necessary to limit the maximum number of
 // such data when using stream load to prevent excessive memory consumption.
@@ -468,7 +468,7 @@ CONF_mInt64(memory_maintenance_sleep_time_s, "10");
 CONF_Int32(memory_max_alignment, "16");
 
 // write buffer size before flush
-CONF_mInt64(write_buffer_size, "209715200");
+CONF_mInt64(write_buffer_size, "1609715200");
 
 // max buffer size used in memtable for the aggregated table
 CONF_mInt64(memtable_max_buffer_size, "419430400");
@@ -479,7 +479,7 @@ CONF_mInt64(memtable_max_buffer_size, "419430400");
 // impact the load performance when user upgrading Doris.
 // user should set these configs properly if necessary.
 CONF_Int64(load_process_max_memory_limit_bytes, "107374182400"); // 100GB
-CONF_Int32(load_process_max_memory_limit_percent, "50");         // 50%
+CONF_Int32(load_process_max_memory_limit_percent, "90");         // 90%
 
 // If the memory consumption of load jobs exceed load_process_max_memory_limit,
 // all load jobs will hang there to wait for memtable flush. We should have a
