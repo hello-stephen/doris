@@ -150,7 +150,7 @@ jobs:
           fi
 
           if [ -z "${trigger_pipelines}" ];then
-            echo "Just a general comment that doesn't match any pipeline rules"
+            echo "Just  a general comment that doesn't match any pipeline rules"
           fi
 
           echo "need run pipelines: ${trigger_pipelines}"
