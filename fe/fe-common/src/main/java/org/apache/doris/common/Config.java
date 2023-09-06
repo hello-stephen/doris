@@ -69,7 +69,7 @@ public class Config extends ConfigBase {
     @ConfField(description = {"FE 日志的级别", "The level of FE log"}, options = {"INFO", "WARN", "ERROR", "FATAL"})
     public static String sys_log_level = "INFO";
 
-    @ConfField(description = {"FE 日志的输出模式，其中 NORMAL 为默认的输出模式，日志同步输出且包含位置信息，"
+    @ConfField(description = {"FE 日志的输出模式，其中  NORMAL 为默认的输出模式，日志同步输出且包含位置信息，"
             + "BRIEF 模式是日志同步输出但不包含位置信息，ASYNC 模式是日志异步输出且不包含位置信息，三种日志输出模式的性能依次递增",
             "The output mode of FE log, and NORMAL mode is the default output mode, which means the logs are "
                     + "synchronized and contain location information. BRIEF mode is synchronized and does not contain"
