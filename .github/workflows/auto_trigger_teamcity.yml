@@ -39,8 +39,14 @@ jobs:
       ISSUE_COMMENT: ${{ github.event.comment.body }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          submodules: recursive
+
       - name: Paths Filter
-        uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
+        uses: ./.github/actions/paths-filter
         id: filter
         with:
           filters: |
