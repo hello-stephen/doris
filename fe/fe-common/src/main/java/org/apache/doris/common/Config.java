@@ -24,7 +24,7 @@ public class Config extends ConfigBase {
                     + "The configuration in this file will override the configuration in fe.conf"})
     public static String custom_config_dir = EnvUtils.getDorisHome() + "/conf";
 
-    @ConfField(description = {"fe.log 和 fe.audit.log 的最大文件大小。超过这个大小后，日志文件会被切分",
+    @ConfField(description = {"fe.log 和 fe.audit.log 的最大文件 大小。超过这个大小后，日志文件会被切分",
             "The maximum file size of fe.log and fe.audit.log. After exceeding this size, the log file will be split"})
     public static int log_roll_size_mb = 1024; // 1 GB
 
