@@ -18,6 +18,7 @@
 name: Auto trigger teamcity
 
 on:
+  pull_request:
   issue_comment:
     types: [created, edited]
   pull_request_review_comment:
@@ -33,6 +34,8 @@ jobs:
     if: (contains(github.event.comment.body, 'buildall') || contains(github.event.comment.body, 'p0') || contains(github.event.comment.body, 'nereids_p0') || contains(github.event.comment.body, 'p1') || contains(github.event.comment.body, 'feut') || contains(github.event.comment.body, 'beut') || contains(github.event.comment.body, 'compile') || contains(github.event.comment.body, 'clickbench') || contains(github.event.comment.body, 'arm') || contains(github.event.comment.body, 'external') || contains(github.event.comment.body, 'just_for_test')) && contains(github.event.comment.body, 'run') && !contains(github.event.comment.body, 'Thanks for your contribution')
 
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,6 +52,7 @@ jobs:
         uses: ./.github/actions/paths-filter
         id: filter
         with:
+          ref: ${{ github.ref }}
           filters: |
             fe_ut_about_changes:
               - 'fe/**'
@@ -93,9 +97,6 @@ jobs:
               - 'thirdparty/**'
               - 'build.sh'
               - 'env.sh'
-            external_about_changes:
-              - 'fe/**'
-              - 'be/**'
 
       - name: Run pipeline by teamcity restful
         run: |
@@ -114,43 +115,116 @@ jobs:
           echo "pull_request_num : ${pull_request_num}"
           echo "encoded_string : ${encoded_string}"
           echo "latest_commit_id : ${{ env.LATEST_COMMIT }}"
+          echo "github.event.issue_comment.body: ${{ github.event.issue_comment.body }}"
+          echo "github.event.issue_comment.issue.pull_request.url: ${{ github.event.issue_comment.issue.pull_request.url }}"
+
+          _create_a_commit_status() {
+              usage="Usage: _create_a_commit_status <PIPELINE> <STATE>
+              PIPELINE options: [ p0 | p1 | feut | beut | compile | clickbench | external | arm ]
+              STATE options: [ success | failure | error | pending ]"
+
+              if [[ $# -ne 2 ]]; then echo "${usage}" && exit 1; fi
+
+              if [[ $1 == p0 ]]; then
+                  context="P0 Regression (Doris Regression)"
+              elif [[ $1 == p1 ]]; then
+                  context="P1 Regression (Doris Regression)"
+              elif [[ $1 == feut ]]; then
+                  context="FE UT (Doris FE UT)"
+              elif [[ $1 == beut ]]; then
+                  context="BE UT (Doris BE UT)"
+              elif [[ $1 == compile ]]; then
+                  context="COMPILE (DORIS_COMPILE)"
+              elif [[ $1 == clickbench ]]; then
+                  context="clickbench-new (clickbench)"
+              elif [[ $1 == external ]]; then
+                  context="External Regression (Doris External Regression)"
+              elif [[ $1 == arm ]]; then
+                  context="P0 Regression (ARM pipeline)"
+              else
+                  echo "${usage}" && exit 1
+              fi
+
+              if [[ "$2" == "success" || "$2" == "failure" || "$2" == "error" || "$2" == "pending" ]]; then
+                  state="$2"
+                  echo "create a commit status $2 on pipleline $1"
+              else
+                  echo "${usage}" && exit 1
+              fi
+
+              curl -s -L -X POST \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  https://api.github.com/repos/apache/doris/statuses/${{ env.LATEST_COMMIT }} \
+                  -d "{\"state\":\"${state}\",\"target_url\":\"\",\"description\":\"no need to run\",\"context\":\"${context}\"}"
+          }
 
           if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "buildall" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
             trigger_pipelines="Doris_Doris_FeUt Doris_DorisBeUt_BeUt Doris_DorisCompile_Compile Doris_Performance_Clickbench_ClickbenchNew Doris_ArmPipeline_P0Regression ${trigger_pipelines}"
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "p0" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.regression_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_DorisRegression_P0Regression  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "p0" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.regression_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_DorisRegression_P0Regression  ${trigger_pipelines}"
+            else
+              _create_a_commit_status p0 success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "nereids_p0" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
-            trigger_pipelines="Doris_DorisRegression_NereidsP0Regression  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "p1" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.regression_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_DorisRegression_P1Regression  ${trigger_pipelines}"
+            else
+              _create_a_commit_status p1 success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "p1" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.regression_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_DorisRegression_P1Regression  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "feut" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.fe_ut_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_Doris_FeUt  ${trigger_pipelines}"
+            else
+              _create_a_commit_status feut success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "feut" && ! "${comment_message}" =~ "Thanks for your contribution"  && ${{ steps.filter.outputs.fe_ut_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_Doris_FeUt  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "beut" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.be_ut_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_DorisBeUt_BeUt  ${trigger_pipelines}"
+            else
+              _create_a_commit_status beut success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "beut" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.be_ut_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_DorisBeUt_BeUt  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "compile" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.regression_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_DorisCompile_Compile  ${trigger_pipelines}"
+            else
+              _create_a_commit_status compile success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "compile" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.regression_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_DorisCompile_Compile  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "clickbench" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.clickbench_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_Performance_Clickbench_ClickbenchNew  ${trigger_pipelines}"
+            else
+              _create_a_commit_status clickbench success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "clickbench" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.clickbench_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_Performance_Clickbench_ClickbenchNew  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "arm" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.regression_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_ArmPipeline_P0Regression  ${trigger_pipelines}"
+            else
+              _create_a_commit_status arm success
+            fi
           fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "arm" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.regression_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_ArmPipeline_P0Regression  ${trigger_pipelines}"
-          fi
-          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "external" && ! "${comment_message}" =~ "Thanks for your contribution" && ${{ steps.filter.outputs.external_about_changes == 'true' }} ]]; then
-            trigger_pipelines="Doris_External_Regression  ${trigger_pipelines}"
+          if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "external" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
+            if ${{ steps.filter.outputs.regression_about_changes == 'true' }}; then
+              trigger_pipelines="Doris_External_Regression  ${trigger_pipelines}"
+            else
+              _create_a_commit_status external success
+            fi
           fi
           if [[ "${comment_message}" =~ "run" && "${comment_message}" =~ "just_for_test" && ! "${comment_message}" =~ "Thanks for your contribution" ]]; then
             trigger_pipelines="Doris_DorisRegression_ExternalRegression  ${trigger_pipelines}"
           fi
 
           if [ -z "${trigger_pipelines}" ];then
-            echo "Just  a general comment that doesn't match any pipeline rules"
+            echo "Just a general comment that doesn't match any pipeline rules"
           fi
 
           echo "need run pipelines: ${trigger_pipelines}"
