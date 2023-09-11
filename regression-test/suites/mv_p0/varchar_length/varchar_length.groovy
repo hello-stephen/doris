@@ -15,16 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/functions/array/function_array_size.h"
+import org.codehaus.groovy.runtime.IOGroovyMethods
 
-#include "vec/functions/simple_function_factory.h"
+suite ("varchar_length") {
 
-namespace doris::vectorized {
+    sql """DROP TABLE IF EXISTS test1; """
 
-void register_function_array_size(SimpleFunctionFactory& factory) {
-    factory.register_function<FunctionArraySize>();
-    factory.register_alias(FunctionArraySize::name, "cardinality");
-    factory.register_alias(FunctionArraySize::name, "array_size");
+    sql """
+            CREATE TABLE test1(
+            vid VARCHAR(1) NOT NULL COMMENT "",
+            report_time int NOT NULL COMMENT ''
+            )
+            ENGINE=OLAP
+            UNIQUE KEY(vid, report_time)
+            DISTRIBUTED BY HASH(vid) BUCKETS AUTO
+            PROPERTIES
+            (
+            "replication_num" = "1"
+            ); 
+        """
+
+    createMV ("CREATE MATERIALIZED VIEW mv_test as SELECT report_time, vid FROM test1 ORDER BY report_time DESC; ")
+
+    qt_select_exp "desc test1 all"
 }
-
-} // namespace doris::vectorized

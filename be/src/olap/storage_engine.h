@@ -35,6 +35,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "agent/task_worker_pool.h"
 #include "common/status.h"
 #include "gutil/ref_counted.h"
 #include "olap/calc_delete_bitmap_executor.h"
@@ -122,8 +123,8 @@ public:
     //
     // @param [out] shard_path choose an available root_path to clone new tablet
     // @return error code
-    Status obtain_shard_path(TStorageMedium::type storage_medium, std::string* shared_path,
-                             DataDir** store);
+    Status obtain_shard_path(TStorageMedium::type storage_medium, int64_t path_hash,
+                             std::string* shared_path, DataDir** store);
 
     // Load new tablet to make it effective.
     //
@@ -137,6 +138,7 @@ public:
     void register_report_listener(TaskWorkerPool* listener);
     void deregister_report_listener(TaskWorkerPool* listener);
     void notify_listeners();
+    void notify_listener(TaskWorkerPool::TaskWorkerType task_worker_type);
 
     Status execute_task(EngineTask* task);
 
@@ -484,6 +486,10 @@ private:
     // aync publish for discontinuous versions of merge_on_write table
     scoped_refptr<Thread> _async_publish_thread;
     std::mutex _async_publish_mutex;
+
+    bool _clear_segment_cache = false;
+
+    std::atomic<bool> _need_clean_trash {false};
 
     DISALLOW_COPY_AND_ASSIGN(StorageEngine);
 };

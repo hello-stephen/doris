@@ -45,11 +45,11 @@ statement
         (WITH LABEL labelName=identifier)? cols=identifierList?  // label and columns define
         (LEFT_BRACKET hints=identifierSeq RIGHT_BRACKET)?  // hint define
         query                                                          #insertIntoQuery
-    | explain? UPDATE tableName=multipartIdentifier tableAlias
+    | explain? cte? UPDATE tableName=multipartIdentifier tableAlias
         SET updateAssignmentSeq
         fromClause?
         whereClause                                                    #update
-    | explain? DELETE FROM tableName=multipartIdentifier tableAlias
+    | explain? cte? DELETE FROM tableName=multipartIdentifier tableAlias
         (PARTITION partition=identifierList)?
         (USING relation (COMMA relation)*)
         whereClause                                                    #delete
@@ -93,14 +93,13 @@ outFileClause
     ;
 
 query
-    : {!doris_legacy_SQL_syntax}? cte? queryTerm queryOrganization
-    | {doris_legacy_SQL_syntax}? queryTerm queryOrganization
+    : cte? queryTerm queryOrganization
     ;
 
 queryTerm
-    : queryPrimary                                                                       #queryTermDefault
+    : queryPrimary                                                         #queryTermDefault
     | left=queryTerm operator=(UNION | EXCEPT | INTERSECT)
-      setQuantifier? right=queryTerm                                                     #setOperation
+      setQuantifier? right=queryTerm                                       #setOperation
     ;
 
 setQuantifier
@@ -109,19 +108,17 @@ setQuantifier
     ;
 
 queryPrimary
-    : querySpecification                                                    #queryPrimaryDefault
-    | TABLE multipartIdentifier                                             #table
-    | LEFT_PAREN query RIGHT_PAREN                                          #subquery
+    : querySpecification                                                   #queryPrimaryDefault
+    | LEFT_PAREN query RIGHT_PAREN                                         #subquery
     ;
 
 querySpecification
-    : {doris_legacy_SQL_syntax}? cte?
-      selectClause
+    : selectClause
       fromClause?
       whereClause?
       aggClause?
       havingClause?
-      {doris_legacy_SQL_syntax}? queryOrganization                                               #regularQuerySpecification
+      {doris_legacy_SQL_syntax}? queryOrganization                         #regularQuerySpecification
     ;
 
 cte
@@ -656,7 +653,6 @@ nonReserved
     | PARSED
     | PARTITION
     | PARTITIONED
-    | PARTITIONS
     | PERCENTILE_CONT
     | PERCENTLIT
     | PERMISSIVE

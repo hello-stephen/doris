@@ -1002,6 +1002,8 @@ DECLARE_Int64(file_cache_min_file_segment_size);
 DECLARE_Int64(file_cache_max_file_segment_size);
 DECLARE_Bool(clear_file_cache);
 DECLARE_Bool(enable_file_cache_query_limit);
+// only for debug, will be removed after finding out the root cause
+DECLARE_mInt32(file_cache_wait_sec_after_fail); // zero for no waiting and retrying
 
 // inverted index searcher cache
 // cache entry stay time after lookup
@@ -1058,6 +1060,9 @@ DECLARE_Bool(enable_shrink_memory);
 // enable cache for high concurrent point query work load
 DECLARE_mInt32(schema_cache_capacity);
 DECLARE_mInt32(schema_cache_sweep_time_sec);
+
+// max number of segment cache
+DECLARE_mInt32(segment_cache_capacity);
 
 // enable binlog
 DECLARE_Bool(enable_feature_binlog);
@@ -1116,6 +1121,9 @@ DECLARE_mBool(enable_merge_on_write_correctness_check);
 
 // The secure path with user files, used in the `local` table function.
 DECLARE_mString(user_files_secure_path);
+
+// BitmapValue serialize version.
+DECLARE_Int16(bitmap_serialize_version);
 
 #ifdef BE_TEST
 // test s3

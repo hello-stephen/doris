@@ -65,6 +65,7 @@ public class SessionVariable implements Serializable, Writable {
     public static final String EXEC_MEM_LIMIT = "exec_mem_limit";
     public static final String SCAN_QUEUE_MEM_LIMIT = "scan_queue_mem_limit";
     public static final String QUERY_TIMEOUT = "query_timeout";
+
     public static final String MAX_EXECUTION_TIME = "max_execution_time";
     public static final String INSERT_TIMEOUT = "insert_timeout";
     public static final String ENABLE_PROFILE = "enable_profile";
@@ -131,6 +132,9 @@ public class SessionVariable implements Serializable, Writable {
     // Compatible with datagrip mysql
     public static final String DEFAULT_STORAGE_ENGINE = "default_storage_engine";
     public static final String DEFAULT_TMP_STORAGE_ENGINE = "default_tmp_storage_engine";
+
+    // Compatible with  mysql
+    public static final String PROFILLING = "profiling";
 
     public static final String DIV_PRECISION_INCREMENT = "div_precision_increment";
 
@@ -364,6 +368,7 @@ public class SessionVariable implements Serializable, Writable {
     public static final String EXTERNAL_TABLE_ANALYZE_PART_NUM = "external_table_analyze_part_num";
 
     public static final String ENABLE_STRONG_CONSISTENCY = "enable_strong_consistency_read";
+    public static final String ENABLE_INSERT_GROUP_COMMIT = "enable_insert_group_commit";
 
     public static final String PARALLEL_SYNC_ANALYZE_TASK_NUM = "parallel_sync_analyze_task_num";
 
@@ -378,6 +383,11 @@ public class SessionVariable implements Serializable, Writable {
     public static final String ROUND_PRECISE_DECIMALV2_VALUE = "round_precise_decimalv2_value";
 
     public static final String JDBC_CLICKHOUSE_QUERY_FINAL = "jdbc_clickhouse_query_final";
+
+    public static final String ENABLE_MEMTABLE_ON_SINK_NODE =
+            "enable_memtable_on_sink_node";
+
+    public static final String INVERTED_INDEX_CONJUNCTION_OPT_THRESHOLD = "inverted_index_conjunction_opt_threshold";
 
     public static final List<String> DEBUG_VARIABLES = ImmutableList.of(
             SKIP_DELETE_PREDICATE,
@@ -713,6 +723,9 @@ public class SessionVariable implements Serializable, Writable {
     public int getBeNumberForTest() {
         return beNumberForTest;
     }
+
+    @VariableMgr.VarAttr(name = PROFILLING)
+    public boolean profiling = false;
 
     public void setBeNumberForTest(int beNumberForTest) {
         this.beNumberForTest = beNumberForTest;
@@ -1081,6 +1094,21 @@ public class SessionVariable implements Serializable, Writable {
             needForward = true)
     public boolean truncateCharOrVarcharColumns = false;
 
+    @VariableMgr.VarAttr(name = ENABLE_MEMTABLE_ON_SINK_NODE, needForward = true)
+    public boolean enableMemtableOnSinkNode = false;
+
+    @VariableMgr.VarAttr(name = ENABLE_INSERT_GROUP_COMMIT)
+    public boolean enableInsertGroupCommit = false;
+
+    @VariableMgr.VarAttr(name = INVERTED_INDEX_CONJUNCTION_OPT_THRESHOLD,
+            description = {"在match_all中求取多个倒排索引的交集时,如果最大的倒排索引中的总数是最小倒排索引中的总数的整数倍,"
+                    + "则使用跳表来优化交集操作。",
+                    "When intersecting multiple inverted indexes in match_all,"
+                    + " if the maximum total count of the largest inverted index"
+                    + " is a multiple of the minimum total count of the smallest inverted index,"
+                    + " use a skiplist to optimize the intersection."})
+    public int invertedIndexConjunctionOptThreshold = 1000;
+
     // If this fe is in fuzzy mode, then will use initFuzzyModeVariables to generate some variables,
     // not the default value set in the code.
     public void initFuzzyModeVariables() {
@@ -1265,6 +1293,7 @@ public class SessionVariable implements Serializable, Writable {
     public int getInsertTimeoutS() {
         return insertTimeoutS;
     }
+
 
     public void setInsertTimeoutS(int insertTimeoutS) {
         this.insertTimeoutS = insertTimeoutS;
@@ -2087,7 +2116,13 @@ public class SessionVariable implements Serializable, Writable {
         tResult.setBufferPoolLimit(maxExecMemByte);
 
         tResult.setQueryTimeout(queryTimeoutS);
-        tResult.setIsReportSuccess(enableProfile);
+        tResult.setEnableProfile(enableProfile);
+        if (enableProfile) {
+            // If enable profile == true, then also set report success to true
+            // be need report success to start report thread. But it is very tricky
+            // we should modify BE in the future.
+            tResult.setIsReportSuccess(true);
+        }
         tResult.setCodegenLevel(codegenLevel);
         tResult.setBeExecVersion(Config.be_exec_version);
         tResult.setEnablePipelineEngine(enablePipelineEngine);
@@ -2156,6 +2191,8 @@ public class SessionVariable implements Serializable, Writable {
         tResult.setEnableOrcLazyMat(enableOrcLazyMat);
 
         tResult.setTruncateCharOrVarcharColumns(truncateCharOrVarcharColumns);
+
+        tResult.setInvertedIndexConjunctionOptThreshold(invertedIndexConjunctionOptThreshold);
 
         return tResult;
     }
