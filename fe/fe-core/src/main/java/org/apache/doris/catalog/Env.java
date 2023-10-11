@@ -1512,8 +1512,6 @@ public class Env {
         loadJobScheduler.start();
         loadEtlChecker.start();
         loadLoadingChecker.start();
-        // export task
-        exportMgr.start();
         // Tablet checker and scheduler
         tabletChecker.start();
         tabletScheduler.start();
@@ -1959,10 +1957,8 @@ public class Env {
 
     public long loadRecycleBin(DataInputStream dis, long checksum) throws IOException {
         recycleBin.readFields(dis);
-        if (!isCheckpointThread()) {
-            // add tablet in Recycle bin to TabletInvertedIndex
-            recycleBin.addTabletToInvertedIndex();
-        }
+        // add tablet in Recycle bin to TabletInvertedIndex
+        recycleBin.addTabletToInvertedIndex();
         // create DatabaseTransactionMgr for db in recycle bin.
         // these dbs do not exist in `idToDb` of the catalog.
         for (Long dbId : recycleBin.getAllDbIds()) {
@@ -5448,8 +5444,8 @@ public class Env {
                             version, lastSuccessVersion, lastFailedVersion, updateTime);
                     getEditLog().logSetReplicaVersion(log);
                 }
-                LOG.info("set replica {} of tablet {} on backend {} as version {}, last success version {} ,"
-                        + ", last failed version {}, update time {}. is replay: {}", replica.getId(), tabletId,
+                LOG.info("set replica {} of tablet {} on backend {} as version {}, last success version {}, "
+                        + "last failed version {}, update time {}. is replay: {}", replica.getId(), tabletId,
                         backendId, version, lastSuccessVersion, lastFailedVersion, updateTime, isReplay);
             } finally {
                 table.writeUnlock();
@@ -5483,7 +5479,7 @@ public class Env {
             }
         }
 
-        if (!isReplay) {
+        if (!isReplay && !Env.isCheckpointThread()) {
             // drop all replicas
             AgentBatchTask batchTask = new AgentBatchTask();
             for (Partition partition : olapTable.getAllPartitions()) {
@@ -5507,6 +5503,7 @@ public class Env {
             AgentTaskExecutor.submit(batchTask);
         }
 
+        // TODO: does checkpoint need update colocate index ?
         // colocation
         Env.getCurrentColocateIndex().removeTable(olapTable.getId());
     }
