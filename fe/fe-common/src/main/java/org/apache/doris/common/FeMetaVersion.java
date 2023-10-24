@@ -18,7 +18,7 @@
 package org.apache.doris.common;
 
 public final class FeMetaVersion {
-    // for max query instance.
+    // for max query instance..
     public static final int VERSION_100 = 100;
     // add errorRowsAfterResumed to distinguish totalErrorRows and currentErrorRows even if the job is paused.
     public static final int VERSION_101 = 101;
