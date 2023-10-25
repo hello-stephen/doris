@@ -27,6 +27,9 @@ on:
 jobs:
   add-meta-change-label:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
 
     steps:
     - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
@@ -67,9 +70,6 @@ jobs:
 
     - name: "Remove meta-change label to PR"
       if: ${{ steps.filter.outputs.meta_changes != 'true' }}
-      permissions:
-        issues: write
-        pull-requests: write
       uses: actions/github-script@v6
       with:
         script: |
