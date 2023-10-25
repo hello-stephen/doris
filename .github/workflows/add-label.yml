@@ -67,7 +67,7 @@ jobs:
 
     - name: "Remove meta-change label to PR"
       if: ${{ steps.filter.outputs.meta_changes != 'true' }}
-      uses: actions/github-script@v6
+      uses: actions/github-script@v5
       with:
         script: |
           github.rest.issues.removeLabel({
