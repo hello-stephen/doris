@@ -20,6 +20,7 @@ package org.apache.doris.clone;
 import org.apache.doris.analysis.AlterSystemStmt;
 import org.apache.doris.analysis.AlterTableStmt;
 import org.apache.doris.analysis.BackendClause;
+import org.apache.doris.analysis.CancelAlterSystemStmt;
 import org.apache.doris.analysis.CreateDbStmt;
 import org.apache.doris.analysis.CreateTableStmt;
 import org.apache.doris.analysis.DropTableStmt;
@@ -416,7 +417,13 @@ public class TabletRepairAndBalanceTest {
         ExceptionChecker.expectThrowsNoException(() -> dropTable(dropStmt1));
         ExceptionChecker.expectThrowsNoException(() -> dropTable(dropStmt2));
         ExceptionChecker.expectThrowsNoException(() -> dropTable(dropStmt3));
-        Assert.assertEquals(0, replicaMetaTable.size());
+        Assert.assertNull(db.getTableNullable("tbl1"));
+        Assert.assertNull(db.getTableNullable("col_tbl1"));
+        Assert.assertNull(db.getTableNullable("col_tbl2"));
+        //  After unify force and non-force drop table, the indexes will be erase eventually.
+        while (colocateTableIndex.getAllGroupIds().size() > 0) {
+            Thread.sleep(1000);
+        }
 
         // set all backends' tag to default
         for (int i = 0; i < backends.size(); ++i) {
@@ -497,6 +504,20 @@ public class TabletRepairAndBalanceTest {
         // set one replica to bad, see if it can be repaired
         oneReplica.setBad(true);
         Assert.assertTrue(checkReplicaBad(oneTablet, oneReplica));
+
+
+        //test cancel decommission backend by ids
+
+        String stmtStr4 = "alter system decommission backend \"" + be.getHost() + ":" + be.getHeartbeatPort() + "\"";
+        stmt = (AlterSystemStmt) UtFrameUtils.parseAndAnalyzeStmt(stmtStr4, connectContext);
+        DdlExecutor.execute(Env.getCurrentEnv(), stmt);
+
+        String stmtStr5 = "cancel decommission backend \"" + be.getId() + "\"";
+        CancelAlterSystemStmt cancelAlterSystemStmt = (CancelAlterSystemStmt) UtFrameUtils.parseAndAnalyzeStmt(stmtStr5, connectContext);
+        DdlExecutor.execute(Env.getCurrentEnv(), cancelAlterSystemStmt);
+
+        Assert.assertFalse(be.isDecommissioned());
+
     }
 
     private static boolean checkReplicaState(Replica replica) throws Exception {

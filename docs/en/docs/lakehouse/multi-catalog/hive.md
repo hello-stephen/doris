@@ -362,7 +362,11 @@ We need to change to
 
 ## Hive Version
 
-Doris can correctly access the Hive Metastore in different Hive versions. By default, Doris will access the Hive Metastore with a Hive 2.3 compatible interface. You can also specify the hive version when creating the Catalog. If accessing Hive 1.1.0 version:
+Doris can correctly access the Hive Metastore in different Hive versions. By default, Doris will access the Hive Metastore with a Hive 2.3 compatible interface.
+
+If you meet error message like `Invalid method name: 'get_table_req'`, which means the hive version is mismatch.
+
+You can specify the hive version when creating the Catalog. If accessing Hive 1.1.0 version:
 
 ```sql 
 CREATE CATALOG hive PROPERTIES (
@@ -390,9 +394,9 @@ For Hive/Iceberge/Hudi
 | char| char | |
 | varchar| varchar| |
 | decimal| decimal | |
-| `array<type>` | `array<type>`| 支持array嵌套，如 `array<array<int>>` |
-| `map<KeyType, ValueType>` | `map<KeyType, ValueType>` | 暂不支持嵌套，KeyType 和 ValueType 需要为基础类型 |
-| `struct<col1: Type1, col2: Type2, ...>` | `struct<col1: Type1, col2: Type2, ...>` | 暂不支持嵌套，Type1, Type2, ... 需要为基础类型 |
+| `array<type>` | `array<type>`| support nested type, for example `array<array<int>>` |
+| `map<KeyType, ValueType>` | `map<KeyType, ValueType>` | support nested type, for example `map<string, array<int>>` |
+| `struct<col1: Type1, col2: Type2, ...>` | `struct<col1: Type1, col2: Type2, ...>` | support nested type, for example `struct<col1: array<int>, col2: map<int, date>>` |
 | other | unsupported | |
 
 ## Whether to truncate char or varchar columns according to the schema of the hive table
