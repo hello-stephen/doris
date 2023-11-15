@@ -46,6 +46,7 @@ _get_pr_changed_files() {
     per_page=100
     file_name='pr_change_files'
     while [[ ${try_times} -gt 0 ]]; do
+        # TODO: 修改文件多于100个的情况未处理
         if curl \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page=1\&per_page="${per_page}" \

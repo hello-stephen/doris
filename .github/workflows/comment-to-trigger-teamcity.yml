@@ -76,11 +76,20 @@ jobs:
         else
           exit 1
         fi
-        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
-        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "-- COMMENT_TRIGGER_TYPE: '${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}'"
+        echo "-- COMMENT_REPEAT_TIMES: '${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}'"
         cd -
+    
+    - name: "test"
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
+      run: |
+        echo "contains feut or buildall"
+    - name: "test2"
+      if: ${{ bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "fe-ut" }}
+      run: |
+        echo "check-pr need run build fe-ut"
 
-    - name: Trigger fe ut
+    - name: "Trigger fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'true' }}
       run: |
         echo "fe-ut related files changed."
@@ -94,7 +103,7 @@ jobs:
         fi
         add_build
 
-    - name: Setup tmate session
+    - name: "Setup tmate session"
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
 
@@ -106,7 +115,7 @@ jobs:
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
-    - name: Trigger be ut
+    - name: "Trigger be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'true' }}
       run: |
         echo "be-ut related files changed."
@@ -119,7 +128,7 @@ jobs:
         fi
         add_build
 
-    - name: Skip be ut
+    - name: "Skip be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'false' }}
       run: |
         echo "be-ut related files not changed."
