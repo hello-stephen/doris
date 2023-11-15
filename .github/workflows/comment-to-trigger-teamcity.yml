@@ -23,7 +23,7 @@ on:
 
 env:
   PULL_REQUEST_NUM: $(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')
-  LATEST_COMMIT: $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" > pr_details.json && jq -r '.head.sha' pr_details.json)
+  LATEST_COMMIT: $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json)
   COMMENT_BODY: ${{ github.event.comment.body }}
 
 jobs:
@@ -51,10 +51,10 @@ jobs:
         echo "PULL_REQUEST_NUM is: ${{ env.PULL_REQUEST_NUM }}"
         echo "LATEST_COMMIT is: ${{ env.LATEST_COMMIT }}"
 
-    - name: "Checkout ${{ steps.extract.outputs.pr_number }}"
-      uses: actions/checkout@v3
+    - name: "Checkout PR ${{ env.PULL_REQUEST_NUM }} ${{ env.LATEST_COMMIT }}"
+      uses: actions/checkout@v4
       with:
-        ref: pull/${{ env.PULL_REQUEST_NUM }}/head
+        ref: ${{ env.LATEST_COMMIT }}
         submodules: recursive
 
     - name: Paths filter
