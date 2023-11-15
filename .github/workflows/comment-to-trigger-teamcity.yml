@@ -82,56 +82,31 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: '${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}'"
         cd -
 
-    - name: "test"
-      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
-      run: |
-        echo "contains feut or buildall"
-
-
     - name: "Trigger fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'true' }}
       run: |
-        echo "fe-ut related files changed."
-        echo "trigger fe ut with teamcity api"
         source ./regression-test/pipeline/common/teamcity-utils.sh
-        if get_running_build; then
-          cancel_running_build
-        fi
-        if get_queue_build; then
-          cancel_queue_build
-        fi
-        add_build
+        cancel_and_add_build
 
-    - name: "Setup tmate session"
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
+    # - name: "Setup tmate session"
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
-    - name: Skip fe ut
+    - name: "Skip fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'false' }}
       run: |
-        echo "fe-ut related files not changed."
-        echo "skip fe ut with teamcity api, just set to success"
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
     - name: "Trigger be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'true' }}
       run: |
-        echo "be-ut related files changed."
-        echo "trigger be ut with teamcity api"
-        if get_running_build; then
-          cancel_running_build
-        fi
-        if get_queue_build; then
-          cancel_queue_build
-        fi
-        add_build
+        source ./regression-test/pipeline/common/teamcity-utils.sh
+        cancel_and_add_build
 
     - name: "Skip be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'false' }}
       run: |
-        echo "be-ut related files not changed."
-        echo "skip be ut with teamcity api, just set to success"
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 

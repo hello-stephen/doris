@@ -41,3 +41,7 @@ cancel_queue_build() {
 skip_build() {
     echo "对于不需要跑流水线的pr, 直接回复github成功"
 }
+
+cancel_and_add_build() {
+    ehco "try to cancel queue or running build first, then add build"
+}

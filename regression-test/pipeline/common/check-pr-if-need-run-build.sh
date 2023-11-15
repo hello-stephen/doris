@@ -62,7 +62,7 @@ _get_pr_changed_files() {
     added_files=$(jq -r '.[] | select(.status == "added") | .filename' "${file_name}")
     modified_files=$(jq -r '.[] | select(.status == "modified") | .filename' "${file_name}")
     removed_files=$(jq -r '.[] | select(.status == "removed") | .filename' "${file_name}")
-    # rm "${file_name}"
+    rm "${file_name}"
     if [[ -z "${all_files}" ]]; then echo -e "\033[31m List pull request(${pr_url}) files FAIL... \033[0m" && return 255; fi
 
     echo -e "
