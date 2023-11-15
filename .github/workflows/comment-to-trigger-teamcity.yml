@@ -22,6 +22,8 @@ on:
     types: [created, edited]
 
 env:
+  PULL_REQUEST_NUM: $(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')
+  LATEST_COMMIT: $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" > pr_details.json && jq -r '.head.sha' pr_details.json)
   COMMENT_BODY: ${{ github.event.comment.body }}
 
 jobs:
@@ -46,14 +48,13 @@ jobs:
     - name: 获取关联的 PR
       id: extract
       run: |
-        pr_number=$(jq --raw-output .issue.pull_request.number "${GITHUB_EVENT_PATH}")
-        echo "Associated PR number is $pr_number"
-        echo "pr_number=${pr_number}" >> "$GITHUB_OUTPUT"
+        echo "PULL_REQUEST_NUM is: ${PULL_REQUEST_NUM}"
+        echo "LATEST_COMMIT is: ${LATEST_COMMIT}"
 
     - name: "Checkout ${{ steps.extract.outputs.pr_number }}"
       uses: actions/checkout@v3
       with:
-        ref: pull/${{ steps.extract.outputs.pr_number }}/head
+        ref: pull/${PULL_REQUEST_NUM}/head
         submodules: recursive
 
     - name: Paths filter
