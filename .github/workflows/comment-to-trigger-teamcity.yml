@@ -84,6 +84,7 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "fe-ut related files changed."
         echo "trigger fe ut with teamcity api"
+        set -x
         source ./regression-test/pipeline/common/teamcity-utils.sh
         if get_running_build; then
           cancel_running_build
@@ -100,6 +101,7 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "fe-ut related files not changed."
         echo "skip fe ut with teamcity api, just set to success"
+        set -x
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
@@ -110,6 +112,7 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "be-ut related files changed."
         echo "trigger be ut with teamcity api"
+        set -x
         if get_running_build; then
           cancel_running_build
         fi
@@ -125,6 +128,7 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "be-ut related files not changed."
         echo "skip be ut with teamcity api, just set to success"
+        set -x
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
