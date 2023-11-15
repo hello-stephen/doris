@@ -58,9 +58,26 @@ jobs:
         ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
         submodules: recursive
 
-    - name: Get changed files
+    # - name: Get changed files
+    #   id: changes
+    #   uses: tj-actions/changed-files@v40
+    #   with:
+    #     base_sha: ${{ github.event.pull_request.base.sha }}
+    
+    - name: Get Changed Files
+      id: pr_changed_files
+      uses: actions/changed-files@v1
+      with:
+        format: 'json'
+        from: ${{ steps.extract.outputs.PULL_REQUEST_NUM }}
+    
+    - name: Filter Changed Files
       id: changes
-      uses: tj-actions/changed-files@v40
+      uses: actions/paths-filter@v2
+      with:
+        filters: |
+          fe_ut:
+            - 'fe/*'
 
     - name: Trigger fe ut
       if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
