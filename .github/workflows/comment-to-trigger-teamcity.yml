@@ -87,6 +87,7 @@ jobs:
         echo "fe-ut related files changed."
         echo "trigger fe ut with teamcity api"
         set -x
+        pwd
         source ./regression-test/pipeline/common/teamcity-utils.sh
         if get_running_build; then
           cancel_running_build
