@@ -48,7 +48,7 @@ _get_pr_changed_files() {
     while [[ ${try_times} -gt 0 ]]; do
         if curl \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?per_page="${per_page}" \
+            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page=10\&per_page="${per_page}" \
             2>/dev/null >"${file_name}"; then
             break
         else

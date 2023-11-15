@@ -56,6 +56,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
+
     - name: "Check if pr need run build"
       id: changes
       run: |
@@ -64,23 +65,68 @@ jobs:
           echo "fe_ut=true" >> "$GITHUB_OUTPUT"
         elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "be-ut"; then
           echo "be_ut=true" >> "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "ckb"; then
+          echo "ckb=true" >> "$GITHUB_OUTPUT"
+          echo "tpch=true" >> "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "regression-p0"; then
+          echo "p0=true" >> "$GITHUB_OUTPUT"
+          echo "external=true" >> "$GITHUB_OUTPUT"
+          echo "pipelinex_p0"=true" >> "$GITHUB_OUTPUT"
+          echo "arm"=true" >> "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "regression-p1"; then
+          echo "p1=true" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Trigger fe ut
-      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'true' }}
       run: |
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "fe-ut related files changed."
         echo "trigger fe ut with teamcity api"
-        echo "..."
+        source ./regression-test/pipeline/common/teamcity-utils.sh
+        if get_running_build; then
+          cancel_running_build
+        fi
+        if get_queue_build; then
+          cancel_queue_build
+        fi
+        add_build
 
-    - name: Skip fe fe_ut
-      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'false' }}
+    - name: Skip fe ut
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'false' }}
       run: |
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "fe-ut related files not changed."
         echo "skip fe ut with teamcity api, just set to success"
-        echo "..."
+        source ./regression-test/pipeline/common/teamcity-utils.sh
+        skip_build
+
+    - name: Trigger be ut
+      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.be_ut == 'true' }}
+      run: |
+        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
+        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "be-ut related files changed."
+        echo "trigger be ut with teamcity api"
+        if get_running_build; then
+          cancel_running_build
+        fi
+        if get_queue_build; then
+          cancel_queue_build
+        fi
+        add_build
+
+    - name: Skip be ut
+      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.be_ut == 'false' }}
+      run: |
+        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
+        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "be-ut related files not changed."
+        echo "skip be ut with teamcity api, just set to success"
+        source ./regression-test/pipeline/common/teamcity-utils.sh
+        skip_build
 
 
 
