@@ -64,7 +64,7 @@ jobs:
             - 'docs/en/docs/sql-manual/*'
 
     - name: Trigger fe ut
-      if: ${{ $COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
+      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
       run: |
         echo "COMMENT_TRIGGER_TYPE: $COMMENT_TRIGGER_TYPE"
         echo "COMMENT_REPEAT_TIMES: $COMMENT_REPEAT_TIMES"
@@ -72,7 +72,7 @@ jobs:
         echo "..."
 
     - name: Skip fe fe_ut
-      if: ${{ $COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
+      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
       run: |
         echo "COMMENT_TRIGGER_TYPE: $COMMENT_TRIGGER_TYPE"
         echo "COMMENT_REPEAT_TIMES: $COMMENT_REPEAT_TIMES"
