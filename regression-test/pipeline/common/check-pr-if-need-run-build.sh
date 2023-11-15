@@ -48,7 +48,7 @@ _get_pr_changed_files() {
     while [[ ${try_times} -gt 0 ]]; do
         if curl \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page=10\&per_page="${per_page}" \
+            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page=1\&per_page="${per_page}" \
             2>/dev/null >"${file_name}"; then
             break
         else
@@ -61,7 +61,7 @@ _get_pr_changed_files() {
     added_files=$(jq -r '.[] | select(.status == "added") | .filename' "${file_name}")
     modified_files=$(jq -r '.[] | select(.status == "modified") | .filename' "${file_name}")
     removed_files=$(jq -r '.[] | select(.status == "removed") | .filename' "${file_name}")
-    rm "${file_name}"
+    # rm "${file_name}"
     if [[ -z "${all_files}" ]]; then echo -e "\033[31m List pull request(${pr_url}) files FAIL... \033[0m" && return 255; fi
 
     echo -e "
