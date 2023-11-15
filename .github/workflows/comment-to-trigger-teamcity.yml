@@ -79,6 +79,7 @@ jobs:
 
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        cd -
 
     - name: Trigger fe ut
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'true' }}
