@@ -34,28 +34,22 @@ jobs:
       COMMENT_BODY: ${{ github.event.comment.body }}
 
     steps:
-    - name: "Parse comment"
-      id: pr_comment
+    - name: "Parse PR comment"
+      id: parse
       run: |
-        echo "COMMENT_BODY: ${COMMENT_BODY}"
+        echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" | tee -a "$GITHUB_OUTPUT"
+        echo "LATEST_COMMIT=${{ env.LATEST_COMMIT }}" | tee -a "$GITHUB_OUTPUT"
+        echo "COMMENT_BODY='$${{ env.COMMENT_BODY }}'" | tee -a "$GITHUB_OUTPUT"
         reg="run (buildall|compile|p0|p1|feut|beut|external|clickbench|pipelinex_p0|arm|tpch)( [1-9]*[0-9]+)*"
         COMMENT_TRIGGER_TYPE="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $2}' | sed -n 1p)"
         COMMENT_REPEAT_TIMES="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $3}' | sed -n 1p)"
-        echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" >> "$GITHUB_OUTPUT"
-        echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" >> "$GITHUB_OUTPUT"
+        echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" | tee -a "$GITHUB_OUTPUT"
+        echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" | tee -a "$GITHUB_OUTPUT"
 
-    - name: 获取关联的 PR
-      id: extract
-      run: |
-        echo "PULL_REQUEST_NUM is: ${{ env.PULL_REQUEST_NUM }}"
-        echo "LATEST_COMMIT is: ${{ env.LATEST_COMMIT }}"
-        echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" >> "$GITHUB_OUTPUT"
-        echo "LATEST_COMMIT=${{ env.LATEST_COMMIT }}" >> "$GITHUB_OUTPUT"
-
-    # - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }}, commit ${{ steps.extract.outputs.LATEST_COMMIT }}"
+    # - name: "Checkout PR ${{ steps.parse.outputs.PULL_REQUEST_NUM }}, commit ${{ steps.parse.outputs.LATEST_COMMIT }}"
     #   uses: actions/checkout@v4
     #   with:
-    #     ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
+    #     ref: ${{ steps.parse.outputs.LATEST_COMMIT }}
 
     - name: "Checkout master"
       uses: actions/checkout@v4
@@ -64,34 +58,30 @@ jobs:
       id: changes
       run: |
         cd regression-test/pipeline/common/
-        if bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "fe-ut"; then
-          echo "fe_ut=true" | tee -a "$GITHUB_OUTPUT"
-        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "be-ut"; then
-          echo "be_ut=true" | tee -a "$GITHUB_OUTPUT"
-        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "ckb"; then
-          echo "ckb=true" | tee -a "$GITHUB_OUTPUT"
+        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "fe-ut"; then
+          echo "changes_fe_ut=true" | tee -a "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "be-ut"; then
+          echo "changes_be_ut=true" | tee -a "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "ckb"; then
+          echo "changes_ckb=true" | tee -a "$GITHUB_OUTPUT"
           echo "tpch=true" | tee -a "$GITHUB_OUTPUT"
-        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "regression-p0"; then
-          echo "p0=true" | tee -a "$GITHUB_OUTPUT"
-          echo "external=true" | tee -a "$GITHUB_OUTPUT"
-          echo "pipelinex_p0"=true" | tee -a "$GITHUB_OUTPUT"
-          echo "arm"=true" | tee -a "$GITHUB_OUTPUT"
-        elif bash check-pr-if-need-run-build.sh "${{ steps.extract.outputs.PULL_REQUEST_NUM }}" "regression-p1"; then
-          echo "p1=true" | tee -a "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "regression-p0"; then
+          echo "changes_p0=true" | tee -a "$GITHUB_OUTPUT"
+          echo "changes_external=true" | tee -a "$GITHUB_OUTPUT"
+          echo "changes_pipelinex_p0"=true" | tee -a "$GITHUB_OUTPUT"
+          echo "changes_arm"=true" | tee -a "$GITHUB_OUTPUT"
+        elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "regression-p1"; then
+          echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
         fi
-
-        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
-        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
+        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
+        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
         cd -
 
     - name: Trigger fe ut
-      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'true' }}
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'true' }}
       run: |
         echo "fe-ut related files changed."
         echo "trigger fe ut with teamcity api"
-        set -x
-        pwd
-        ls -al ./regression-test/pipeline/common/teamcity-utils.sh
         source ./regression-test/pipeline/common/teamcity-utils.sh
         if get_running_build; then
           cancel_running_build
@@ -106,20 +96,18 @@ jobs:
       uses: mxschmitt/action-tmate@v3
 
     - name: Skip fe ut
-      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'false' }}
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'false' }}
       run: |
         echo "fe-ut related files not changed."
         echo "skip fe ut with teamcity api, just set to success"
-        set -x
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
     - name: Trigger be ut
-      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.be_ut == 'true' }}
+      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'true' }}
       run: |
         echo "be-ut related files changed."
         echo "trigger be ut with teamcity api"
-        set -x
         if get_running_build; then
           cancel_running_build
         fi
@@ -129,11 +117,10 @@ jobs:
         add_build
 
     - name: Skip be ut
-      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.be_ut == 'false' }}
+      if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'false' }}
       run: |
         echo "be-ut related files not changed."
         echo "skip be ut with teamcity api, just set to success"
-        set -x
         source ./regression-test/pipeline/common/teamcity-utils.sh
         skip_build
 
