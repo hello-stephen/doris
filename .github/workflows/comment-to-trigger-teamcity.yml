@@ -28,13 +28,12 @@ jobs:
   check-comment-if-need-to-trigger-teamcity:
 
     # This job only runs for pull request comments
-    # if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
+    if: ${{ github.event.issue.pull_request && contains(fromJSON('["run buildall", "run compile", "run beut", "run feut", "run p0", "run p1", "run external", "run pipelinex_p0", "run clickbench", "run arm", "run tpch"]'), github.event.comment.body) }}
 
     runs-on: ubuntu-latest
 
     steps:
-    - name: "Parse PR comment"
-      if: ${{ github.event.issue.pull_request }}
+    - name: "Parse comment"
       id: pr_comment
       run: |
         echo "COMMENT_BODY: ${COMMENT_BODY}"
@@ -44,20 +43,17 @@ jobs:
         echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" >> "$GITHUB_OUTPUT"
         echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" >> "$GITHUB_OUTPUT"
 
-    - name: test1
-      if: ${{ contains(github.event.comment.body, 'run') }}
+    - name: 获取关联的 PR
+      id: extract
       run: |
-        echo "contains run"
-    - name: test2
-      if: ${{ contains(fromJSON('["run buildall", "run compile", "run beut", "run feut", "run p0", "run p1", "run external", "run pipelinex_p0", "run clickbench", "run arm", "run tpch"]'), github.event.comment.body) }}
-      run: |
-        echo "contains run type"
+        pr_number=$(jq --raw-output .issue.pull_request.number "${GITHUB_EVENT_PATH}")
+        echo "Associated PR number is $pr_number"
+        echo "pr_number=${pr_number}" >> "$GITHUB_OUTPUT"
 
-    - name: "Checkout ${{ github.ref }} ( ${{ github.event.pull_request.head.sha }} )"
-      if: ${{ contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
-      uses: actions/checkout@v4
+    - name: "Checkout ${{ steps.extract.outputs.pr_number }}"
+      uses: actions/checkout@v3
       with:
-        ref: ${{ github.event.pull_request.head.sha }}
+        ref: pull/${{ steps.extract.outputs.pr_number }}/head
         submodules: recursive
 
     - name: Paths filter
