@@ -58,6 +58,7 @@ jobs:
       id: changes
       run: |
         cd regression-test/pipeline/common/
+        set -x
         if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "fe-ut"; then
           echo "changes_fe_ut=true" | tee -a "$GITHUB_OUTPUT"
         elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "be-ut"; then
@@ -72,6 +73,8 @@ jobs:
           echo "changes_arm"=true" | tee -a "$GITHUB_OUTPUT"
         elif bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "regression-p1"; then
           echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
+        else
+          exit 1
         fi
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
