@@ -88,6 +88,7 @@ jobs:
         echo "trigger fe ut with teamcity api"
         set -x
         pwd
+        ls -al ./regression-test/pipeline/common/teamcity-utils.sh
         source ./regression-test/pipeline/common/teamcity-utils.sh
         if get_running_build; then
           cancel_running_build
