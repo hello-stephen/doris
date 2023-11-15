@@ -49,7 +49,7 @@ jobs:
       run: |
         echo "contains run"
     - name: test2
-      if: ${{ contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
+      if: ${{ contains(fromJSON('["run buildall", "run compile", "run beut", "run feut", "run p0", "run p1", "run external", "run pipelinex_p0", "run clickbench", "run arm", "run tpch"]'), github.event.comment.body) }}
       run: |
         echo "contains run type"
 
