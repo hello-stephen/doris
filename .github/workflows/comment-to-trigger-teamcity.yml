@@ -41,8 +41,8 @@ jobs:
         reg="run (buildall|compile|p0|p1|feut|beut|external|clickbench|pipelinex_p0|arm|tpch)( [1-9]*[0-9]+)*"
         COMMENT_TRIGGER_TYPE="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $2}' | sed -n 1p)"
         COMMENT_REPEAT_TIMES="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $3}' | sed -n 1p)"
-        echo "::set-env name=COMMENT_TRIGGER_TYPE::${COMMENT_TRIGGER_TYPE}"
-        echo "::set-env name=COMMENT_REPEAT_TIMES::${COMMENT_REPEAT_TIMES}"
+        echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" >> "$GITHUB_OUTPUT"
+        echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" >> "$GITHUB_OUTPUT"
 
     - name: "Checkout ${{ github.ref }} ( ${{ github.event.pull_request.head.sha }} )"
       if: ${{ contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
@@ -68,16 +68,16 @@ jobs:
     - name: Trigger fe ut
       if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
       run: |
-        echo "COMMENT_TRIGGER_TYPE: $COMMENT_TRIGGER_TYPE"
-        echo "COMMENT_REPEAT_TIMES: $COMMENT_REPEAT_TIMES"
+        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
+        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "trigger fe ut with teamcity api"
         echo "..."
 
     - name: Skip fe fe_ut
       if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
       run: |
-        echo "COMMENT_TRIGGER_TYPE: $COMMENT_TRIGGER_TYPE"
-        echo "COMMENT_REPEAT_TIMES: $COMMENT_REPEAT_TIMES"
+        echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
+        echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
         echo "skip fe ut with teamcity api, just set to success"
         echo "..."
 
