@@ -21,6 +21,9 @@ on:
   issue_comment:
     types: [created, edited]
 
+env:
+  COMMENT_BODY: ${{ github.event.comment.body }}
+
 jobs:
   check-comment-if-need-to-trigger-teamcity:
 
@@ -28,9 +31,6 @@ jobs:
     if: ${{ github.event.issue.pull_request && contains("${COMMENT_BODY}", 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), "${COMMENT_BODY}") }}
 
     runs-on: ubuntu-latest
-
-    env:
-      COMMENT_BODY: ${{ github.event.comment.body }}
 
     steps:
     - name: "Parse PR comment"
