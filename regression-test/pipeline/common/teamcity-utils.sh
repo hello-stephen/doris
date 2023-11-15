@@ -43,5 +43,5 @@ skip_build() {
 }
 
 cancel_and_add_build() {
-    ehco "try to cancel queue or running build first, then add build"
+    echo "try to cancel queue or running build first, then add build"
 }
