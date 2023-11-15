@@ -44,6 +44,15 @@ jobs:
         echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" >> "$GITHUB_OUTPUT"
         echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" >> "$GITHUB_OUTPUT"
 
+    - name: test1
+      if: ${{ contains(github.event.comment.body, 'run') }}
+      run: |
+        echo "contains run"
+    - name: test2
+      if: ${{ contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
+      run: |
+        echo "contains run type"
+
     - name: "Checkout ${{ github.ref }} ( ${{ github.event.pull_request.head.sha }} )"
       if: ${{ contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
       uses: actions/checkout@v4
@@ -52,8 +61,8 @@ jobs:
         submodules: recursive
 
     - name: Paths filter
-      uses: ./.github/actions/paths-filter
-      id: filter
+      uses: dorny/paths-filter@v2
+      id: changes
       with:
         filters: |
           fe_ut:
@@ -66,7 +75,7 @@ jobs:
             - 'docs/en/docs/sql-manual/*'
 
     - name: Trigger fe ut
-      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
+      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
       run: |
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
@@ -74,7 +83,7 @@ jobs:
         echo "..."
 
     - name: Skip fe fe_ut
-      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.filter.outputs.fe_ut == 'true' }}
+      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
       run: |
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
