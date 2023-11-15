@@ -28,7 +28,7 @@ jobs:
   check-comment-if-need-to-trigger-teamcity:
 
     # This job only runs for pull request comments
-    if: ${{ github.event.issue.pull_request && contains("${COMMENT_BODY}", 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), "${COMMENT_BODY}") }}
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
 
     runs-on: ubuntu-latest
 
