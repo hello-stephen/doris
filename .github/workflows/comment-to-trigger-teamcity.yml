@@ -52,25 +52,15 @@ jobs:
         echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" >> "$GITHUB_OUTPUT"
         echo "LATEST_COMMIT=${{ env.LATEST_COMMIT }}" >> "$GITHUB_OUTPUT"
 
-    - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }} ${{ steps.extract.outputs.LATEST_COMMIT }}"
+    - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }}, ${{ steps.extract.outputs.LATEST_COMMIT }}"
       uses: actions/checkout@v4
       with:
         ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
         submodules: recursive
 
-    - name: Paths filter
-      uses: dorny/paths-filter@v2
+    - name: Get changed files
       id: changes
-      with:
-        filters: |
-          fe_ut:
-            - 'fe/*'
-            - 'fe_plugins/*'
-            - 'bin/start_fe.sh'
-            - 'bin/stop_fe.sh'
-            - 'run-fe-ut.sh'
-            - 'docs/zh-CN/docs/sql-manual/*'
-            - 'docs/en/docs/sql-manual/*'
+      uses: tj-actions/changed-files@v40
 
     - name: Trigger fe ut
       if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
@@ -81,7 +71,7 @@ jobs:
         echo "..."
 
     - name: Skip fe fe_ut
-      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'true' }}
+      if: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE == 'feut' && steps.changes.outputs.fe_ut == 'false' }}
       run: |
         echo "-- COMMENT_TRIGGER_TYPE: ${{ steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE }}"
         echo "-- COMMENT_REPEAT_TIMES: ${{ steps.pr_comment.outputs.COMMENT_REPEAT_TIMES }}"
