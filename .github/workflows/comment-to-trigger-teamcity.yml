@@ -21,7 +21,6 @@ on:
   issue_comment:
     types: [created, edited]
 
-
 jobs:
   check-comment-if-need-to-trigger-teamcity:
 
@@ -50,8 +49,8 @@ jobs:
       run: |
         echo "PULL_REQUEST_NUM is: ${{ env.PULL_REQUEST_NUM }}"
         echo "LATEST_COMMIT is: ${{ env.LATEST_COMMIT }}"
-        echo "PULL_REQUEST_NUM=${PULL_REQUEST_NUM}" >> "$GITHUB_OUTPUT"
-        echo "LATEST_COMMIT=${LATEST_COMMIT}" >> "$GITHUB_OUTPUT"
+        echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" >> "$GITHUB_OUTPUT"
+        echo "LATEST_COMMIT=${{ env.LATEST_COMMIT }}" >> "$GITHUB_OUTPUT"
 
     - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }} ${{ steps.extract.outputs.LATEST_COMMIT }}"
       uses: actions/checkout@v4
