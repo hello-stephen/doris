@@ -98,6 +98,10 @@ jobs:
         fi
         add_build
 
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+
     - name: Skip fe ut
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.pr_comment.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.fe_ut == 'false' }}
       run: |
