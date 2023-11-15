@@ -28,12 +28,13 @@ jobs:
   check-comment-if-need-to-trigger-teamcity:
 
     # This job only runs for pull request comments
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
+    # if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
 
     runs-on: ubuntu-latest
 
     steps:
     - name: "Parse PR comment"
+      if: ${{ github.event.issue.pull_request }}
       id: pr_comment
       run: |
         echo "COMMENT_BODY: ${COMMENT_BODY}"
@@ -44,6 +45,7 @@ jobs:
         echo "::set-env name=COMMENT_REPEAT_TIMES::${COMMENT_REPEAT_TIMES}"
 
     - name: "Checkout ${{ github.ref }} ( ${{ github.event.pull_request.head.sha }} )"
+      if: ${{ contains(github.event.comment.body, 'run') && contains(fromJSON('["buildall", "compile", "beut", "feut", "p0", "p1", "external", "pipelinex_p0", "clickbench", "arm", "tpch"]'), github.event.comment.body) }}
       uses: actions/checkout@v4
       with:
         ref: ${{ github.event.pull_request.head.sha }}
