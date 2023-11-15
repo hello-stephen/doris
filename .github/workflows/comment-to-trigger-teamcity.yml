@@ -52,10 +52,13 @@ jobs:
         echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" >> "$GITHUB_OUTPUT"
         echo "LATEST_COMMIT=${{ env.LATEST_COMMIT }}" >> "$GITHUB_OUTPUT"
 
-    - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }}, commit ${{ steps.extract.outputs.LATEST_COMMIT }}"
+    # - name: "Checkout PR ${{ steps.extract.outputs.PULL_REQUEST_NUM }}, commit ${{ steps.extract.outputs.LATEST_COMMIT }}"
+    #   uses: actions/checkout@v4
+    #   with:
+    #     ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
+
+    - name: "Checkout master"
       uses: actions/checkout@v4
-      with:
-        ref: ${{ steps.extract.outputs.LATEST_COMMIT }}
 
     - name: "Check if pr need run build"
       id: changes
