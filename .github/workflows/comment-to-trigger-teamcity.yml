@@ -32,6 +32,7 @@ jobs:
       PULL_REQUEST_NUM: $(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')
       LATEST_COMMIT: $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json)
       COMMENT_BODY: ${{ github.event.comment.body }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
     - name: "Parse PR comment"
@@ -82,21 +83,27 @@ jobs:
         echo "-- COMMENT_REPEAT_TIMES: '${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}'"
         cd -
 
-    - name: "Trigger fe ut"
-      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'true' }}
+    - name: "Trigger or Skip fe ut"
+      if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
       run: |
+        echo "GITHUB_TOKEN: ${GITHUB_TOKEN}"
         source ./regression-test/pipeline/common/teamcity-utils.sh
-        cancel_and_add_build
-
-    # - name: "Setup tmate session"
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
+        if [[ ${{ steps.changes.outputs.changes_fe_ut }} == 'true' ]];then
+          add_build "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}" "${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
+        else
+          skip_build "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
+        fi
 
     - name: "Skip fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_fe_ut == 'false' }}
       run: |
         source ./regression-test/pipeline/common/teamcity-utils.sh
-        skip_build
+        skip_teamcity_pipeline "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
+
+    # - name: "Setup tmate session"
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
+
 
     - name: "Trigger be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) && steps.changes.outputs.changes_be_ut == 'true' }}
