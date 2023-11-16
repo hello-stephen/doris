@@ -47,11 +47,6 @@ jobs:
         echo "COMMENT_TRIGGER_TYPE=${COMMENT_TRIGGER_TYPE}" | tee -a "$GITHUB_OUTPUT"
         echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" | tee -a "$GITHUB_OUTPUT"
 
-    # - name: "Checkout PR ${{ steps.parse.outputs.PULL_REQUEST_NUM }}, commit ${{ steps.parse.outputs.COMMIT_ID }}"
-    #   uses: actions/checkout@v4
-    #   with:
-    #     ref: ${{ steps.parse.outputs.COMMIT_ID }}
-
     - name: "Checkout master"
       uses: actions/checkout@v4
 
@@ -81,9 +76,9 @@ jobs:
           echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
         fi
 
-    - name: "Setup tmate session"
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
+    # - name: "Setup tmate session"
+    #   if: ${{ failure() }}
+    #   uses: mxschmitt/action-tmate@v3
 
     - name: "Trigger or Skip fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}

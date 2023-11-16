@@ -129,13 +129,11 @@ add_build() {
     fi
     local PIPELINE
     PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
-    if ret=$(
-        curl -s -X POST \
-            -u OneMoreChance:OneMoreChance \
-            -H "Content-Type:text/plain" \
-            -H "Accept: application/json" \
-            "http://43.132.222.7:8111/httpAuth/action.html?add2Queue=${PIPELINE}&branchName=pull/${PULL_REQUEST_NUM}&name=env.commit_id_from_trigger\&value=${COMMIT_ID_FROM_TRIGGER:-}&name=env.repeat_times&value=${COMMENT_REPEAT_TIMES:-1}"
-    ); then
+    if curl -s -X POST \
+        -u OneMoreChance:OneMoreChance \
+        -H "Content-Type:text/plain" \
+        -H "Accept: application/json" \
+        "http://43.132.222.7:8111/httpAuth/action.html?add2Queue=${PIPELINE}&branchName=pull/${PULL_REQUEST_NUM}&name=env.commit_id_from_trigger&value=${COMMIT_ID_FROM_TRIGGER:-}&name=env.repeat_times_from_trigger&value=${COMMENT_REPEAT_TIMES:-1}"; then
         echo "INFO: Add new build to PIPELINE ${PIPELINE} of PR ${PULL_REQUEST_NUM} with COMMENT_REPEAT_TIMES ${COMMENT_REPEAT_TIMES:-1}"
     else
         return 1
