@@ -19,9 +19,10 @@
 #!/bin/bash
 
 # github中评论的要触发的流水线名字
-# 到 
+# 到
 # teamcity流水线实际的名称
 # 的映射
+# 新加流水线需要修改这里
 declare -A comment_to_pipeline
 comment_to_pipeline=(
     ['feut']='Doris_Doris_FeUt'
@@ -36,6 +37,24 @@ comment_to_pipeline=(
     ['tpch']='Tpch_TpchSf100'
 )
 
+# github中评论的要触发的流水线名字
+# 到
+# teamcity流水线返回结果给github的名称
+# 的映射
+# 新加流水线需要修改这里
+declare -A conment_to_context
+conment_to_context=(
+    ['compile']='COMPILE (DORIS_COMPILE)'
+    ['feut']='FE UT (Doris FE UT)'
+    ['beut']='BE UT (Doris BE UT)'
+    ['p0']='P0 Regression (Doris Regression)'
+    ['p1']='P1 Regression (Doris Regression)'
+    ['external']='External Regression (Doris External Regression)'
+    ['pipelinex_p0']='P0 Regression PipelineX (Doris Regression)'
+    ['clickbench']='clickbench-new (clickbench)'
+    ['arm']='P0 Regression (ARM pipeline)'
+    ['tpch']='tpch-sf100 (tpch)'
+)
 
 get_commit_id_of_build() {
     # 获取某个build的commit id
@@ -104,7 +123,7 @@ add_build() {
     PULL_REQUEST_NUM="$1"
     COMMENT_TRIGGER_TYPE="$2"
     COMMENT_REPEAT_TIMES="$3"
-    
+
     if [[ -z "${COMMIT_ID_FROM_TRIGGER}" ]]; then
         echo "WARNINR: env COMMIT_ID_FROM_TRIGGER not set"
     fi
@@ -144,24 +163,8 @@ function skip_build() {
     PR_COMMIT_ID="$1"
     COMMENT_TRIGGER_TYPE="$2"
 
-    # github中评论的要触发的流水线名字
-    # 到 
-    # teamcity流水线返回结果给github的名称
-    # 的映射
-    # 新加流水线需要修改这里
-    declare -A context_map
-    context_map=(['compile']='COMPILE (DORIS_COMPILE)'
-        ['feut']='FE UT (Doris FE UT)'
-        ['beut']='BE UT (Doris BE UT)'
-        ['p0']='P0 Regression (Doris Regression)'
-        ['p1']='P1 Regression (Doris Regression)'
-        ['external']='External Regression (Doris External Regression)'
-        ['pipelinex_p0']='P0 Regression PipelineX (Doris Regression)'
-        ['clickbench']='clickbench-new (clickbench)'
-        ['arm']='P0 Regression (ARM pipeline)'
-        ['tpch']='tpch-sf100 (tpch)')
     local state="${TC_BUILD_STATE:-success}" # 可选值 success failure pending
-    payload="{\"state\":\"${state}\",\"target_url\":\"\",\"description\":\"Skip teamCity build\",\"context\":\"${context_map[${COMMENT_TRIGGER_TYPE}]}\"}"
+    payload="{\"state\":\"${state}\",\"target_url\":\"\",\"description\":\"Skip teamCity build\",\"context\":\"${conment_to_context[${COMMENT_TRIGGER_TYPE}]}\"}"
     if curl -L \
         -X POST \
         -H "Accept: application/vnd.github+json" \
