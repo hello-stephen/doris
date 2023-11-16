@@ -58,30 +58,32 @@ jobs:
     - name: "Check if pr need run build"
       id: changes
       run: |
-        cd regression-test/pipeline/common/
+        source regression-test/pipeline/common/github-utils.sh
         set -x
-        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "fe-ut"; then
+        _get_pr_changed_files "${{ steps.parse.outputs.PULL_REQUEST_NUM }}"
+        if change_files_fe_ut; then
           echo "changes_fe_ut=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "be-ut"; then
+        if change_files_be_ut; then
           echo "changes_be_ut=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "ckb"; then
+        if change_files_ckb; then
           echo "changes_ckb=true" | tee -a "$GITHUB_OUTPUT"
           echo "tpch=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "regression-p0"; then
+        if change_files_regression_p0; then
           echo "changes_p0=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_external=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_pipelinex_p0"=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_arm"=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if bash check-pr-if-need-run-build.sh "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "regression-p1"; then
+        if change_files_regression_p1; then
           echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        echo "-- COMMENT_TRIGGER_TYPE: '${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}'"
-        echo "-- COMMENT_REPEAT_TIMES: '${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}'"
-        cd -
+
+    - name: "Setup tmate session"
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
 
     - name: "Trigger or Skip fe ut"
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
@@ -93,10 +95,6 @@ jobs:
         else
           skip_build "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}"
         fi
-
-    # - name: "Setup tmate session"
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
 
     - name: "Trigger or Skip be ut"
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}

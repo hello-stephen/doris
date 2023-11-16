@@ -178,7 +178,6 @@ function skip_build() {
     fi
 }
 
-# GITHUB_TOKEN=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
 # skip_teamcity_pipeline '9940812522228f574c5b630666189bc0aa4b1c60' clickbench
 
 cancel_and_add_build() {
