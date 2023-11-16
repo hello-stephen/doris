@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PULL_REQUEST_NUM: $(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')
-      COMMIT_ID_FROM_TRIGGER: $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json)
+      COMMIT_ID_FROM_TRIGGER: ${{ $(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json) }}
       COMMENT_BODY: ${{ github.event.comment.body }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
