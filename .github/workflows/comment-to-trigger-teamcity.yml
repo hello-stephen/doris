@@ -84,6 +84,7 @@ jobs:
       if: ${{ contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
       run: |
         source ./regression-test/pipeline/common/teamcity-utils.sh
+        COMMIT_ID_FROM_TRIGGER=${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}
         set -x
         if [[ ${{ steps.changes.outputs.changes_fe_ut }} == 'true' ]];then
           add_build "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}" "${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
@@ -95,6 +96,7 @@ jobs:
       if: ${{ contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
       run: |
         source ./regression-test/pipeline/common/teamcity-utils.sh
+        COMMIT_ID_FROM_TRIGGER=${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}
         set -x
         if [[ ${{ steps.changes.outputs.changes_be_ut }} == 'true' ]];then
           add_build "${{ steps.parse.outputs.PULL_REQUEST_NUM }}" "${{ steps.parse.outputs.COMMENT_TRIGGER_TYPE }}" "${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
