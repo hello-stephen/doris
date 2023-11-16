@@ -29,8 +29,6 @@ jobs:
 
     runs-on: ubuntu-latest
     env:
-      PULL_REQUEST_NUM: $(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')
-      COMMIT_ID_FROM_TRIGGER: ${{ curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json }}
       COMMENT_BODY: ${{ github.event.comment.body }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,9 +36,11 @@ jobs:
     - name: "Parse PR comment"
       id: parse
       run: |
-        echo "PULL_REQUEST_NUM=${{ env.PULL_REQUEST_NUM }}" | tee -a "$GITHUB_OUTPUT"
-        echo "COMMIT_ID_FROM_TRIGGER=${{ env.COMMIT_ID_FROM_TRIGGER }}" | tee -a "$GITHUB_OUTPUT"
-        echo "COMMENT_BODY='${{ env.COMMENT_BODY }}'" | tee -a "$GITHUB_OUTPUT"
+        PULL_REQUEST_NUM="$(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')"
+        COMMIT_ID_FROM_TRIGGER="$(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/$(echo '${{ github.event.issue.pull_request.url }}' | awk -F/ '{print $NF}')" > pr_details.json && jq -r '.head.sha' pr_details.json)"
+        echo "PULL_REQUEST_NUM=${PULL_REQUEST_NUM}" | tee -a "$GITHUB_OUTPUT"
+        echo "COMMIT_ID_FROM_TRIGGER=${COMMIT_ID_FROM_TRIGGER}" | tee -a "$GITHUB_OUTPUT"
+        echo "COMMENT_BODY='${COMMENT_BODY}'" | tee -a "$GITHUB_OUTPUT"
         reg="run (buildall|compile|p0|p1|feut|beut|external|clickbench|pipelinex_p0|arm|tpch)( [1-9]*[0-9]+)*"
         COMMENT_TRIGGER_TYPE="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $2}' | sed -n 1p)"
         COMMENT_REPEAT_TIMES="$(echo "${COMMENT_BODY}" | xargs | grep -E "${reg}" | awk -F' ' '{print $3}' | sed -n 1p)"
