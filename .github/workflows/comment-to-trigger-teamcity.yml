@@ -56,23 +56,23 @@ jobs:
         source regression-test/pipeline/common/github-utils.sh
         set -x
         _get_pr_changed_files "${{ steps.parse.outputs.PULL_REQUEST_NUM }}"
-        if change_files_fe_ut; then
+        if file_changed_fe_ut; then
           echo "changes_fe_ut=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if change_files_be_ut; then
+        if file_changed_be_ut; then
           echo "changes_be_ut=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if change_files_ckb; then
+        if file_changed_ckb; then
           echo "changes_ckb=true" | tee -a "$GITHUB_OUTPUT"
           echo "tpch=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if change_files_regression_p0; then
+        if file_changed_regression_p0; then
           echo "changes_p0=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_external=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_pipelinex_p0"=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_arm"=true" | tee -a "$GITHUB_OUTPUT"
         fi
-        if change_files_regression_p1; then
+        if file_changed_regression_p1; then
           echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
         fi
 

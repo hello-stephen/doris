@@ -64,6 +64,25 @@ ${COMMENT_BODY}
     create_an_issue_comment "${ISSUE_NUMBER}" "${COMMENT_BODY}"
 }
 
+_get_pr_changed_files_count() {
+    PULL_NUMBER="${PULL_NUMBER:-$1}"
+    if [[ -z "${PULL_NUMBER}" ]]; then
+        echo "Usage: _get_pr_changed_files_count PULL_NUMBER"
+        return 1
+    fi
+
+    OWNER="${OWNER:=apache}"
+    REPO="${REPO:=doris}"
+    if ret=$(
+        curl -s -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}" | jq -e '.changed_files'
+    ); then
+        echo "${ret}"
+    else
+        return 1
+    fi
+}
+
 _get_pr_changed_files() {
     usage_str="Usage:
     _get_pr_changed_files <PULL_NUMBER> [OPTIONS]
@@ -77,20 +96,30 @@ _get_pr_changed_files() {
     PULL_NUMBER="$1"
     which_file="$2"
     pr_url="https://github.com/${OWNER:=apache}/${REPO:=doris}/pull/${PULL_NUMBER}"
-    try_times=10
     # The number of results per page (max 100), Default 30.
     per_page=100
-    file_name='pr_change_files'
-    while [[ ${try_times} -gt 0 ]]; do
-        # TODO: 修改文件多于100个的情况未处理
-        if curl \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page=1\&per_page="${per_page}" \
-            2>/dev/null >"${file_name}"; then
-            break
-        else
-            try_times=$((try_times - 1))
-        fi
+    file_name='pr_changed_files'
+    rm -f "${file_name}"
+    page=1
+    changed_files_count="$(_get_pr_changed_files_count "${PULL_NUMBER}")"
+    while [[ ${changed_files_count} -gt 0 ]]; do
+        try_times=10
+        while [[ ${try_times} -gt 0 ]]; do
+            # TODO: 修改文件多于100个的情况未处理
+            set -x
+            if curl -s \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}"/files?page="${page}"\&per_page="${per_page}" \
+                >>"${file_name}"; then
+                set +x
+                break
+            else
+                set +x
+                try_times=$((try_times - 1))
+            fi
+        done
+        page=$((page + 1))
+        changed_files_count=$((changed_files_count - per_page))
     done
     if [[ ${try_times} = 0 ]]; then echo -e "\033[31m List pull request(${pr_url}) files FAIL... \033[0m" && return 255; fi
 
@@ -131,7 +160,7 @@ _only_modified_regression_conf() {
     echo "only modified regression conf" && return 0
 }
 
-change_files_fe_ut() {
+file_changed_fe_ut() {
     if _only_modified_regression_conf; then echo "return no need" && return 1; fi
     if [[ -z ${all_files} ]]; then echo "return need" && return 0; fi
     for af in ${all_files}; do
@@ -146,7 +175,7 @@ change_files_fe_ut() {
     echo "return no need" && return 1
 }
 
-change_files_be_ut() {
+file_changed_be_ut() {
     if _only_modified_regression_conf; then echo "return no need" && return 1; fi
     if [[ -z ${all_files} ]]; then echo "return need" && return 0; fi
     for af in ${all_files}; do
@@ -162,7 +191,7 @@ change_files_be_ut() {
     echo "return no need" && return 1
 }
 
-change_files_regression_p0() {
+file_changed_regression_p0() {
     if _only_modified_regression_conf; then echo "return no need" && return 1; fi
     if [[ -z ${all_files} ]]; then echo "return need" && return 0; fi
     for af in ${all_files}; do
@@ -187,16 +216,16 @@ change_files_regression_p0() {
     echo "return no need" && return 1
 }
 
-change_files_regression_p1() {
-    change_files_regression_p0
+file_changed_regression_p1() {
+    file_changed_regression_p0
 }
 
-change_files_arm_regression_p0() {
+file_changed_arm_regression_p0() {
     if [[ $(($1 % 2)) -eq 0 ]]; then echo "the pull request id is even, return no need" && return 1; fi
-    change_files_regression_p0
+    file_changed_regression_p0
 }
 
-change_files_ckb() {
+file_changed_ckb() {
     if _only_modified_regression_conf; then echo "return no need" && return 1; fi
     if [[ -z ${all_files} ]]; then echo "return need" && return 0; fi
     for af in ${all_files}; do
