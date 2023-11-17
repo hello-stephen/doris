@@ -25,7 +25,8 @@ jobs:
   check-comment-if-need-to-trigger-teamcity:
 
     # This job only runs for pull request comments
-    if: ${{ github.event.issue.pull_request && contains(fromJSON('["run buildall", "run compile", "run beut", "run feut", "run p0", "run p1", "run external", "run pipelinex_p0", "run clickbench", "run arm", "run tpch"]'), github.event.comment.body) }}
+    # if: ${{ github.event.issue.pull_request && contains(fromJSON('["run buildall", "run compile", "run beut", "run feut", "run p0", "run p1", "run external", "run pipelinex_p0", "run clickbench", "run arm", "run tpch"]'), github.event.comment.body) }}
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run') && ( contains(github.event.comment.body, 'buildall') || contains(github.event.comment.body, 'compile') || contains(github.event.comment.body, 'beut') || contains(github.event.comment.body, 'feut') || contains(github.event.comment.body, 'p0') || contains(github.event.comment.body, 'p1') || contains(github.event.comment.body, 'external') || contains(github.event.comment.body, 'pipelinex_p0') || contains(github.event.comment.body, 'clickbench') || contains(github.event.comment.body, 'arm') || contains(github.event.comment.body, 'tpch') ) }}
 
     runs-on: ubuntu-latest
     env:
