@@ -69,8 +69,8 @@ jobs:
         if file_changed_regression_p0; then
           echo "changes_p0=true" | tee -a "$GITHUB_OUTPUT"
           echo "changes_external=true" | tee -a "$GITHUB_OUTPUT"
-          echo "changes_pipelinex_p0"=true" | tee -a "$GITHUB_OUTPUT"
-          echo "changes_arm"=true" | tee -a "$GITHUB_OUTPUT"
+          echo "changes_pipelinex_p0=true" | tee -a "$GITHUB_OUTPUT"
+          echo "changes_arm=true" | tee -a "$GITHUB_OUTPUT"
         fi
         if file_changed_regression_p1; then
           echo "changes_p1=true" | tee -a "$GITHUB_OUTPUT"
