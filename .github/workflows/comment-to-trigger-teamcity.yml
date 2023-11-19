@@ -32,7 +32,6 @@ jobs:
     env:
       COMMENT_BODY: ${{ github.event.comment.body }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      TT: ${{ curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" | jq -r '.base.ref' }}
 
     steps:
     - name: "Parse PR comment"
@@ -56,7 +55,6 @@ jobs:
         fi
 
         echo "GITHUB_EVENT_PATH: $GITHUB_EVENT_PATH"
-        echo "TT: $TT"
 
         PULL_REQUEST_NUM="$(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')"
         COMMIT_ID_FROM_TRIGGER="$(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" | jq -r '.head.sha')"
