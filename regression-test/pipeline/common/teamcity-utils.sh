@@ -114,18 +114,15 @@ get_queue_build_of_pr() {
 
 # get_queue_build_of_pr "$1" "$2"
 
-add_build() {
+trigger_build() {
     # 新触发一个build
-    if [[ -z "$2" ]]; then
-        echo "Usage: add_build PIPELINE PULL_REQUEST_NUM [COMMENT_REPEAT_TIMES]"
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMIT_ID_FROM_TRIGGER="${COMMIT_ID_FROM_TRIGGER:-$2}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$3}"
+    COMMENT_REPEAT_TIMES="${COMMENT_REPEAT_TIMES:-$4}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMIT_ID_FROM_TRIGGER}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: add_build PULL_REQUEST_NUM COMMIT_ID_FROM_TRIGGER COMMENT_TRIGGER_TYPE [COMMENT_REPEAT_TIMES]"
         return 1
-    fi
-    PULL_REQUEST_NUM="$1"
-    COMMENT_TRIGGER_TYPE="$2"
-    COMMENT_REPEAT_TIMES="$3"
-
-    if [[ -z "${COMMIT_ID_FROM_TRIGGER}" ]]; then
-        echo "WARNINR: env COMMIT_ID_FROM_TRIGGER not set"
     fi
     local PIPELINE
     PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
@@ -148,17 +145,17 @@ cancel_queue_build() {
     echo "TODO: cancel_queue_build"
 }
 
-function skip_build() {
+skip_build() {
     # 对于不需要跑teamcity pipeline的PR，直接调用github的接口返回成功
     if [[ -z "${GITHUB_TOKEN}" ]]; then
         echo "ERROR: env GITHUB_TOKEN not set"
         return 1
     fi
     if [[ -z "$2" ]]; then
-        echo "Usage: skip_teamcity_pipeline PR_COMMIT_ID COMMENT_TRIGGER_TYPE"
+        echo "Usage: skip_teamcity_pipeline COMMIT_ID_FROM_TRIGGER COMMENT_TRIGGER_TYPE"
         return 1
     fi
-    PR_COMMIT_ID="$1"
+    COMMIT_ID_FROM_TRIGGER="$1"
     COMMENT_TRIGGER_TYPE="$2"
 
     local state="${TC_BUILD_STATE:-success}" # 可选值 success failure pending
@@ -168,11 +165,33 @@ function skip_build() {
         -H "Accept: application/vnd.github+json" \
         -H "Authorization: Bearer ${GITHUB_TOKEN:-}" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
-        "https://api.github.com/repos/apache/doris/statuses/${PR_COMMIT_ID:-}" \
+        "https://api.github.com/repos/apache/doris/statuses/${COMMIT_ID_FROM_TRIGGER:-}" \
         -d "${payload}"; then
-        echo "INFO: Skipped ${PR_COMMIT_ID} ${COMMENT_TRIGGER_TYPE}"
+        echo "INFO: Skipped ${COMMIT_ID_FROM_TRIGGER} ${COMMENT_TRIGGER_TYPE}"
     else
         return 1
+    fi
+}
+
+trigger_or_skip_build() {
+    # 根据相关文件是否修改，来触发or跳过跑流水线
+    FILE_CHANGED="$1"
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$2}"
+    COMMIT_ID_FROM_TRIGGER="${COMMIT_ID_FROM_TRIGGER:-$3}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$4}"
+    COMMENT_REPEAT_TIMES="${COMMENT_REPEAT_TIMES:-$5}"
+    if [[ -z "${FILE_CHANGED}" ||
+        -z "${PULL_REQUEST_NUM}" ||
+        -z "${COMMIT_ID_FROM_TRIGGER}" ||
+        -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: add_build FILE_CHANGED PULL_REQUEST_NUM COMMIT_ID_FROM_TRIGGER COMMENT_TRIGGER_TYPE [COMMENT_REPEAT_TIMES]"
+        return 1
+    fi
+
+    if [[ "${FILE_CHANGED}" == "true" ]]; then
+        trigger_build "${PULL_REQUEST_NUM}" "${COMMIT_ID_FROM_TRIGGER}" "${COMMENT_TRIGGER_TYPE}" "${COMMENT_REPEAT_TIMES}"
+    else
+        skip_build "${COMMIT_ID_FROM_TRIGGER}" "${COMMENT_TRIGGER_TYPE}"
     fi
 }
 
