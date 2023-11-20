@@ -75,15 +75,18 @@ _get_pr_changed_files_count() {
     REPO="${REPO:=doris}"
     try_times=10
     while [[ ${try_times} -gt 0 ]]; do
+        set -x
         if ret=$(
             curl -s -H "Accept: application/vnd.github+json" \
                 https://api.github.com/repos/"${OWNER}"/"${REPO}"/pulls/"${PULL_NUMBER}" | jq -e '.changed_files'
         ); then
+            set +x
             echo "${ret}" && return
         fi
         sleep 1s
         try_times=$((try_times - 1))
     done
+    set +x
     if [[ ${try_times} -eq 0 ]]; then echo "Failed to get pr(${PULL_NUMBER}) changed file count" && return 1; fi
 }
 
