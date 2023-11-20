@@ -60,6 +60,7 @@ get_commit_id_of_build() {
     # 获取某个build的commit id
     if [[ -z "$1" ]]; then return 1; fi
     build_id="$1"
+    set -x
     if ret=$(
         curl -s -X GET \
             -u OneMoreChance:OneMoreChance \
@@ -67,9 +68,11 @@ get_commit_id_of_build() {
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/builds/${build_id}"
     ); then
+        set +x
         commit_id=$(echo "${ret}" | jq -r '.revisions.revision[0].version')
         echo "${commit_id}"
     else
+        set +x
         return 1
     fi
 }
@@ -84,6 +87,7 @@ get_running_build_of_pr() {
 
     PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
     local running_builds_list
+    set -x
     if ret=$(
         curl -s -X GET \
             -u OneMoreChance:OneMoreChance \
@@ -91,9 +95,11 @@ get_running_build_of_pr() {
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/builds?locator=buildType:${PIPELINE},branch:pull/${PULL_REQUEST_NUM},running:true"
     ); then
+        set +x
         running_builds_list=$(echo "${ret}" | jq -r '.build[].id')
         echo "${running_builds_list}"
     else
+        set +x
         return 1
     fi
 }
@@ -109,6 +115,7 @@ get_queue_build_of_pr() {
 
     PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
     local queue_builds_list
+    set -x
     if ret=$(
         curl -s -X GET \
             -u OneMoreChance:OneMoreChance \
@@ -116,9 +123,11 @@ get_queue_build_of_pr() {
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/buildQueue?locator=buildType:${PIPELINE}"
     ); then
+        set +x
         queue_builds_list=$(echo "${ret}" | jq ".build[] | select(.branchName == \"pull/${PULL_REQUEST_NUM}\") | .id")
         echo "${queue_builds_list}"
     else
+        set +x
         echo "WARNING: failed to get queue build for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}" && return 1
     fi
 }
@@ -135,14 +144,17 @@ cancel_running_build() {
     local build_ids
     if ! build_ids=$(get_running_build_of_pr "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"); then return 1; fi
     for id in ${build_ids}; do
+        set -x
         if curl -s -X POST \
             -u OneMoreChance:OneMoreChance \
             -H "Content-Type:application/json" \
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/builds/id:${id}" \
             -d '{ "comment": "Canceling this running build before triggering a new one", "readdIntoQueue": false }'; then
-            echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+            set +x
+            echo -e "\nINFO: canceled running build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         else
+            set +x
             echo "WARNING: failed to cancel running build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         fi
     done
@@ -160,14 +172,17 @@ cancel_queue_build() {
     local build_ids
     if ! build_ids=$(get_queue_build_of_pr "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"); then return 1; fi
     for id in ${build_ids}; do
+        set -x
         if curl -s -X POST \
             -u OneMoreChance:OneMoreChance \
             -H "Content-Type:application/json" \
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/buildQueue/id:${id}" \
             -d '{ "comment": "Canceling this queued build before triggering a new one", "readdIntoQueue": false }'; then
-            echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+            set +x
+            echo -e "\nINFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         else
+            set +x
             echo "WARNING: failed to cancel queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         fi
     done
@@ -189,6 +204,7 @@ skip_build() {
 
     local state="${TC_BUILD_STATE:-success}" # 可选值 success failure pending
     payload="{\"state\":\"${state}\",\"target_url\":\"\",\"description\":\"Skip teamCity build\",\"context\":\"${conment_to_context[${COMMENT_TRIGGER_TYPE}]}\"}"
+    set -x
     if curl -L \
         -X POST \
         -H "Accept: application/vnd.github+json" \
@@ -196,8 +212,10 @@ skip_build() {
         -H "X-GitHub-Api-Version: 2022-11-28" \
         "https://api.github.com/repos/apache/doris/statuses/${COMMIT_ID_FROM_TRIGGER:-}" \
         -d "${payload}"; then
+        set +x
         echo "INFO: Skipped ${COMMIT_ID_FROM_TRIGGER} ${COMMENT_TRIGGER_TYPE}"
     else
+        set +x
         return 1
     fi
 }
@@ -215,13 +233,16 @@ trigger_build() {
     fi
     local PIPELINE
     PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
+    set -x
     if curl -s -X POST \
         -u OneMoreChance:OneMoreChance \
         -H "Content-Type:text/plain" \
         -H "Accept: application/json" \
         "http://43.132.222.7:8111/httpAuth/action.html?add2Queue=${PIPELINE}&branchName=pull/${PULL_REQUEST_NUM}&name=env.commit_id_from_trigger&value=${COMMIT_ID_FROM_TRIGGER:-}&name=env.repeat_times_from_trigger&value=${COMMENT_REPEAT_TIMES:-1}"; then
+        set +x
         echo "INFO: Add new build to PIPELINE ${PIPELINE} of PR ${PULL_REQUEST_NUM} with COMMENT_REPEAT_TIMES ${COMMENT_REPEAT_TIMES:-1}"
     else
+        set +x
         return 1
     fi
 }
