@@ -140,7 +140,7 @@ cancel_running_build() {
             -H "Content-Type:application/json" \
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/builds/id:${id}" \
-            -d '{ "comment": "Canceling a running build before triggering a new one", "readdIntoQueue": false }'; then
+            -d '{ "comment": "Canceling this running build before triggering a new one", "readdIntoQueue": false }'; then
             echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         else
             echo "WARNING: failed to cancel running build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
@@ -165,7 +165,7 @@ cancel_queue_build() {
             -H "Content-Type:application/json" \
             -H "Accept: application/json" \
             "http://43.132.222.7:8111/app/rest/buildQueue/id:${id}" \
-            -d '{ "comment": "Canceling a queued build before triggering a new one", "readdIntoQueue": false }'; then
+            -d '{ "comment": "Canceling this queued build before triggering a new one", "readdIntoQueue": false }'; then
             echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
         else
             echo "WARNING: failed to cancel queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
