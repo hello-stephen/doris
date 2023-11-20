@@ -76,10 +76,13 @@ get_commit_id_of_build() {
 
 get_running_build_of_pr() {
     # "获取pr在某条流水线上正在跑的build"
-    if [[ -z "${PIPELINE}" || -z "${PULL_REQUEST_NUM}" ]]; then
-        echo "ERROR: env PIPELINE or PULL_REQUEST_NUM not set."
-        return 1
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$2}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: get_queue_build_of_pr PULL_REQUEST_NUM COMMENT_TRIGGER_TYPE" && return 1
     fi
+
+    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
     local running_builds_list
     if ret=$(
         curl -s -X GET \
@@ -94,9 +97,17 @@ get_running_build_of_pr() {
         return 1
     fi
 }
+# get_running_build_of_pr "$1" "$2"
 
 get_queue_build_of_pr() {
     # "获取pr在某条流水线上排队的build"
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$2}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: get_queue_build_of_pr PULL_REQUEST_NUM COMMENT_TRIGGER_TYPE" && return 1
+    fi
+
+    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
     local queue_builds_list
     if ret=$(
         curl -s -X GET \
@@ -108,42 +119,60 @@ get_queue_build_of_pr() {
         queue_builds_list=$(echo "${ret}" | jq ".build[] | select(.branchName == \"pull/${PULL_REQUEST_NUM}\") | .id")
         echo "${queue_builds_list}"
     else
-        return 1
+        echo "WARNING: failed to get queue build for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}" && return 1
     fi
 }
-
 # get_queue_build_of_pr "$1" "$2"
 
-trigger_build() {
-    # 新触发一个build
-    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
-    COMMIT_ID_FROM_TRIGGER="${COMMIT_ID_FROM_TRIGGER:-$2}"
-    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$3}"
-    COMMENT_REPEAT_TIMES="${COMMENT_REPEAT_TIMES:-$4}"
-    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMIT_ID_FROM_TRIGGER}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
-        echo "Usage: add_build PULL_REQUEST_NUM COMMIT_ID_FROM_TRIGGER COMMENT_TRIGGER_TYPE [COMMENT_REPEAT_TIMES]"
-        return 1
-    fi
-    local PIPELINE
-    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
-    if curl -s -X POST \
-        -u OneMoreChance:OneMoreChance \
-        -H "Content-Type:text/plain" \
-        -H "Accept: application/json" \
-        "http://43.132.222.7:8111/httpAuth/action.html?add2Queue=${PIPELINE}&branchName=pull/${PULL_REQUEST_NUM}&name=env.commit_id_from_trigger&value=${COMMIT_ID_FROM_TRIGGER:-}&name=env.repeat_times_from_trigger&value=${COMMENT_REPEAT_TIMES:-1}"; then
-        echo "INFO: Add new build to PIPELINE ${PIPELINE} of PR ${PULL_REQUEST_NUM} with COMMENT_REPEAT_TIMES ${COMMENT_REPEAT_TIMES:-1}"
-    else
-        return 1
-    fi
-}
-
 cancel_running_build() {
-    echo "TODO: cancel_running_build"
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$2}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: get_queue_build_of_pr PULL_REQUEST_NUM COMMENT_TRIGGER_TYPE" && return 1
+    fi
+
+    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
+    local build_ids
+    if ! build_ids=$(get_running_build_of_pr "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"); then return 1; fi
+    for id in ${build_ids}; do
+        if curl -s -X POST \
+            -u OneMoreChance:OneMoreChance \
+            -H "Content-Type:application/json" \
+            -H "Accept: application/json" \
+            "http://43.132.222.7:8111/app/rest/builds/id:${id}" \
+            -d '{ "comment": "Canceling a running build before triggering a new one", "readdIntoQueue": false }'; then
+            echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+        else
+            echo "WARNING: failed to cancel running build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+        fi
+    done
 }
+# cancel_running_build "$1" "$2"
 
 cancel_queue_build() {
-    echo "TODO: cancel_queue_build"
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$2}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: get_queue_build_of_pr PULL_REQUEST_NUM COMMENT_TRIGGER_TYPE" && return 1
+    fi
+
+    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
+    local build_ids
+    if ! build_ids=$(get_queue_build_of_pr "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"); then return 1; fi
+    for id in ${build_ids}; do
+        if curl -s -X POST \
+            -u OneMoreChance:OneMoreChance \
+            -H "Content-Type:application/json" \
+            -H "Accept: application/json" \
+            "http://43.132.222.7:8111/app/rest/buildQueue/id:${id}" \
+            -d '{ "comment": "Canceling a queued build before triggering a new one", "readdIntoQueue": false }'; then
+            echo "INFO: canceled queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+        else
+            echo "WARNING: failed to cancel queue build(id ${id}) for PR ${PULL_REQUEST_NUM} of pipeline ${PIPELINE}"
+        fi
+    done
 }
+# cancel_queue_build "$1" "$2"
 
 skip_build() {
     # 对于不需要跑teamcity pipeline的PR，直接调用github的接口返回成功
@@ -172,6 +201,31 @@ skip_build() {
         return 1
     fi
 }
+# skip_build "$1" "$2"
+
+trigger_build() {
+    # 新触发一个build
+    PULL_REQUEST_NUM="${PULL_REQUEST_NUM:-$1}"
+    COMMIT_ID_FROM_TRIGGER="${COMMIT_ID_FROM_TRIGGER:-$2}"
+    COMMENT_TRIGGER_TYPE="${COMMENT_TRIGGER_TYPE:-$3}"
+    COMMENT_REPEAT_TIMES="${COMMENT_REPEAT_TIMES:-$4}"
+    if [[ -z "${PULL_REQUEST_NUM}" || -z "${COMMIT_ID_FROM_TRIGGER}" || -z "${COMMENT_TRIGGER_TYPE}" ]]; then
+        echo "Usage: add_build PULL_REQUEST_NUM COMMIT_ID_FROM_TRIGGER COMMENT_TRIGGER_TYPE [COMMENT_REPEAT_TIMES]"
+        return 1
+    fi
+    local PIPELINE
+    PIPELINE="${comment_to_pipeline[${COMMENT_TRIGGER_TYPE}]}"
+    if curl -s -X POST \
+        -u OneMoreChance:OneMoreChance \
+        -H "Content-Type:text/plain" \
+        -H "Accept: application/json" \
+        "http://43.132.222.7:8111/httpAuth/action.html?add2Queue=${PIPELINE}&branchName=pull/${PULL_REQUEST_NUM}&name=env.commit_id_from_trigger&value=${COMMIT_ID_FROM_TRIGGER:-}&name=env.repeat_times_from_trigger&value=${COMMENT_REPEAT_TIMES:-1}"; then
+        echo "INFO: Add new build to PIPELINE ${PIPELINE} of PR ${PULL_REQUEST_NUM} with COMMENT_REPEAT_TIMES ${COMMENT_REPEAT_TIMES:-1}"
+    else
+        return 1
+    fi
+}
+# trigger_build "$1" "$2" "$3" "$4"
 
 trigger_or_skip_build() {
     # 根据相关文件是否修改，来触发or跳过跑流水线
@@ -189,14 +243,11 @@ trigger_or_skip_build() {
     fi
 
     if [[ "${FILE_CHANGED}" == "true" ]]; then
+        cancel_running_build "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"
+        cancel_queue_build "${PULL_REQUEST_NUM}" "${COMMENT_TRIGGER_TYPE}"
         trigger_build "${PULL_REQUEST_NUM}" "${COMMIT_ID_FROM_TRIGGER}" "${COMMENT_TRIGGER_TYPE}" "${COMMENT_REPEAT_TIMES}"
     else
         skip_build "${COMMIT_ID_FROM_TRIGGER}" "${COMMENT_TRIGGER_TYPE}"
     fi
 }
-
-# skip_teamcity_pipeline '9940812522228f574c5b630666189bc0aa4b1c60' clickbench
-
-cancel_and_add_build() {
-    echo "try to cancel queue or running build first, then add build"
-}
+# trigger_or_skip_build "$1" "$2" "$3" "$4" "$5"
