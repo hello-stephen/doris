@@ -111,9 +111,9 @@ jobs:
           echo "changed_p1=true" | tee -a "$GITHUB_OUTPUT"
         fi
 
-    # - name: "Setup tmate session"
-    #   if: ${{ failure() }}
-    #   uses: mxschmitt/action-tmate@v3
+    - name: "Setup tmate session"
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
 
     - name: "Trigger or Skip feut"
       if: ${{ steps.parse.outputs.comment_trigger && contains(fromJSON('["feut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
