@@ -128,7 +128,7 @@ jobs:
 
 
     - name: "Trigger or Skip beut"
-      if: ${{ steps.parse.outputs.comment_trigger && contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
+      if: ${{ steps.parse.outputs.comment_trigger == "true" && contains(fromJSON('["beut", "buildall"]'), steps.parse.outputs.COMMENT_TRIGGER_TYPE) }}
       run: |
         source ./regression-test/pipeline/common/teamcity-utils.sh
         set -x
