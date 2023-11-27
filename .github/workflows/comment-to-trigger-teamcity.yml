@@ -35,7 +35,7 @@ jobs:
     steps:
     - name: "Parse PR comment"
       id: parse
-      run: |
+      run: |-
         COMMENT_BODY=$(echo "${COMMENT_BODY}" | xargs)
         if [[ "${COMMENT_BODY}" == *'run buildall'* ||
             "${COMMENT_BODY}" == *'run compile'* ||
