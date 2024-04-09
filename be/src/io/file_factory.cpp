@@ -77,7 +77,7 @@ Status FileFactory::create_file_writer(TFileType::type type, ExecEnv* env,
         std::shared_ptr<io::BrokerFileSystem> fs;
         RETURN_IF_ERROR(io::BrokerFileSystem::create(broker_addresses[0], properties, &fs));
         RETURN_IF_ERROR(fs->create_file(path, &file_writer));
-        break;   
+        break;
     }
     case TFileType::FILE_S3: {
         S3URI s3_uri(path);
