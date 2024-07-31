@@ -33,7 +33,7 @@ export DORIS_HOME="${ROOT}"
 
 . "${DORIS_HOME}/env.sh"
 
-# Check args
+# Check args.
 usage() {
     echo "
 Usage: $0 <options>
