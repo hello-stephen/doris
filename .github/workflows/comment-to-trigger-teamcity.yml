@@ -388,6 +388,6 @@ jobs:
         skip_build "${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}" cloudut
     
     - name: "Setup tmate session"
-      if: ${{ failure() && github.event_name == 'workflow_dispatch' }}
+      if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 30
