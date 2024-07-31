@@ -83,7 +83,7 @@ jobs:
         echo "COMMENT_REPEAT_TIMES=${COMMENT_REPEAT_TIMES}" | tee -a "$GITHUB_OUTPUT"
 
     - name: "Checkout master"
-      if: ${{ fromJSON(steps.parse.outputs.comment_trigger) }}
+      if: ${{ fromJSON(steps.parse.outputs.comment_trigger) || fromJSON(steps.parse.outputs.comment_skip) }}
       uses: actions/checkout@v4
 
     - name: "Check if pr need run build"
@@ -386,8 +386,3 @@ jobs:
         skip_build "${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}" cloud_p0
         skip_build "${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}" cloud_p1
         skip_build "${{ steps.parse.outputs.COMMIT_ID_FROM_TRIGGER }}" cloudut
-    
-    - name: "Setup tmate session"
-      if: ${{ failure() }}
-      uses: mxschmitt/action-tmate@v3
-      timeout-minutes: 30
