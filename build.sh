@@ -38,7 +38,7 @@ export TP_LIB_DIR="${DORIS_THIRDPARTY}/installed/lib"
 
 . "${DORIS_HOME}/env.sh"
 
-# Check args
+# Check args.
 usage() {
     echo "
 Usage: $0 <options>
