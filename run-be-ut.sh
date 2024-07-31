@@ -51,7 +51,7 @@ Usage: $0 <options>
      --run              build and run all ut
      --run --filter=xx  build and run specified ut
      --coverage         coverage after run ut
-     -j                 build parallel
+     -j                 builds parallel
      -h                 print this help message
 
   Eg.
