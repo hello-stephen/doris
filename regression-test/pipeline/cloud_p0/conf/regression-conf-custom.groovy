@@ -67,6 +67,15 @@ max_failure_num = 50
 // test_routine_load
 enableKafkaTest=true
 
+// minio external test config
+enableExternalMinioTest=true
+extMinioHost = "***.**.**.**"  // will changed by regression-test/pipeline/cloud_p0/run.sh
+extMinioPort = 19000
+extMinioAk = "minioadmin"
+extMinioSk = "minioadmin"
+extMinioRegion = "us-east-1"
+extMinioBucket = "test-bucket"
+
 // vim: tw=10086 et ts=4 sw=4:
 
 // trino-connector catalog test config
