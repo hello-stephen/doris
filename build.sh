@@ -25,7 +25,7 @@
 # compiled and installed correctly.
 ##############################################################
 
-set -eo pipefail
+set -ueo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
