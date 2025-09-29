@@ -294,5 +294,4 @@ hudiEmrCatalog = ""
 icebergS3TablesCatalog=""
 icebergS3TablesCatalogGlueRest=""
 
-accessKeyID=
-accessKeySecret=
+aa=b'b
