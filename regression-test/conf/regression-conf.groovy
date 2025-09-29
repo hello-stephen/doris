@@ -294,3 +294,5 @@ hudiEmrCatalog = ""
 icebergS3TablesCatalog=""
 icebergS3TablesCatalogGlueRest=""
 
+accessKeyID=LTAI5tCmdUgNEmaT2svTHWpk
+accessKeySecret=aitXx8HxiWlBMNq5xl1CeJUiAZEOIL
