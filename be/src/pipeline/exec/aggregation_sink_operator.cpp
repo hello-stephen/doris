@@ -26,6 +26,7 @@
 #include "runtime/primitive_type.h"
 #include "runtime/thread_context.h"
 #include "util/runtime_profile.h"
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/common/hash_table/hash.h"
 #include "vec/exprs/vectorized_agg_fn.h"
 
@@ -101,8 +102,9 @@ Status AggSinkLocalState::open(RuntimeState* state) {
     }
 
     if (Base::_shared_state->probe_expr_ctxs.empty()) {
-        _agg_data->without_key = reinterpret_cast<vectorized::AggregateDataPtr>(
-                _agg_profile_arena.alloc(p._total_size_of_aggregate_states));
+        _agg_data->without_key =
+                reinterpret_cast<vectorized::AggregateDataPtr>(_agg_profile_arena.aligned_alloc(
+                        p._total_size_of_aggregate_states, p._align_aggregate_states));
 
         if (p._is_merge) {
             _executor = std::make_unique<Executor<true, true>>();
@@ -224,6 +226,13 @@ size_t AggSinkLocalState::_memory_usage() const {
     return usage;
 }
 
+bool AggSinkLocalState::is_blockable() const {
+    return std::any_of(
+            Base::_shared_state->aggregate_evaluators.begin(),
+            Base::_shared_state->aggregate_evaluators.end(),
+            [](const vectorized::AggFnEvaluator* evaluator) { return evaluator->is_blockable(); });
+}
+
 void AggSinkLocalState::_update_memusage_with_serialized_key() {
     std::visit(vectorized::Overload {
                        [&](std::monostate& arg) -> void {
@@ -277,6 +286,7 @@ Status AggSinkLocalState::_merge_with_serialized_key_helper(vectorized::Block* b
             block->replace_by_position_if_const(result_column_id);
             key_columns[i] = block->get_by_position(result_column_id).column.get();
         }
+        key_columns[i]->assume_mutable()->replace_float_special_values();
     }
 
     size_t rows = block->rows();
@@ -459,6 +469,7 @@ Status AggSinkLocalState::_execute_with_serialized_key_helper(vectorized::Block*
                     block->get_by_position(result_column_id)
                             .column->convert_to_full_column_if_const();
             key_columns[i] = block->get_by_position(result_column_id).column.get();
+            key_columns[i]->assume_mutable()->replace_float_special_values();
         }
     }
 
@@ -618,6 +629,7 @@ bool AggSinkLocalState::_emplace_into_hash_table_limit(vectorized::AggregateData
                                 try {
                                     HashMethodType::try_presis_key_and_origin(key, origin,
                                                                               _agg_arena_pool);
+                                    _shared_state->refresh_top_limit(i, key_columns);
                                     auto mapped =
                                             _shared_state->aggregate_data_container->append_data(
                                                     origin);
@@ -626,7 +638,6 @@ bool AggSinkLocalState::_emplace_into_hash_table_limit(vectorized::AggregateData
                                         throw Exception(st.code(), st.to_string());
                                     }
                                     ctor(key, mapped);
-                                    _shared_state->refresh_top_limit(i, key_columns);
                                 } catch (...) {
                                     // Exception-safety - if it can not allocate memory or create status,
                                     // the destructors will not be called.
@@ -711,6 +722,7 @@ size_t AggSinkLocalState::get_reserve_mem_size(RuntimeState* state, bool eos) co
     return size_to_reserve;
 }
 
+// TODO: Tricky processing if `multi_distinct_` exists which will be re-planed by optimizer.
 AggSinkOperatorX::AggSinkOperatorX(ObjectPool* pool, int operator_id, int dest_id,
                                    const TPlanNode& tnode, const DescriptorTbl& descs,
                                    bool require_bucket_distribution)
@@ -724,9 +736,20 @@ AggSinkOperatorX::AggSinkOperatorX(ObjectPool* pool, int operator_id, int dest_i
           _limit(tnode.limit),
           _have_conjuncts((tnode.__isset.vconjunct && !tnode.vconjunct.nodes.empty()) ||
                           (tnode.__isset.conjuncts && !tnode.conjuncts.empty())),
-          _partition_exprs(tnode.__isset.distribute_expr_lists && require_bucket_distribution
-                                   ? tnode.distribute_expr_lists[0]
-                                   : tnode.agg_node.grouping_exprs),
+          _partition_exprs(
+                  tnode.__isset.distribute_expr_lists &&
+                                  (require_bucket_distribution ||
+                                   std::any_of(
+                                           tnode.agg_node.aggregate_functions.begin(),
+                                           tnode.agg_node.aggregate_functions.end(),
+                                           [](const TExpr& texpr) -> bool {
+                                               return texpr.nodes[0]
+                                                       .fn.name.function_name.starts_with(
+                                                               vectorized::
+                                                                       DISTINCT_FUNCTION_PREFIX);
+                                           }))
+                          ? tnode.distribute_expr_lists[0]
+                          : tnode.agg_node.grouping_exprs),
           _is_colocate(tnode.agg_node.__isset.is_colocate && tnode.agg_node.is_colocate),
           _require_bucket_distribution(require_bucket_distribution),
           _agg_fn_output_row_descriptor(descs, tnode.row_tuples, tnode.nullable_tuples) {}
@@ -746,7 +769,7 @@ Status AggSinkOperatorX::init(const TPlanNode& tnode, RuntimeState* state) {
         RETURN_IF_ERROR(vectorized::AggFnEvaluator::create(
                 _pool, tnode.agg_node.aggregate_functions[i],
                 tnode.agg_node.__isset.agg_sort_infos ? tnode.agg_node.agg_sort_infos[i] : dummy,
-                tnode.agg_node.grouping_exprs.empty(), &evaluator));
+                tnode.agg_node.grouping_exprs.empty(), false, &evaluator));
         _aggregate_evaluators.push_back(evaluator);
     }
 

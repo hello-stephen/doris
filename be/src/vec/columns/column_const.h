@@ -27,13 +27,10 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
-#include <ostream>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
-#include "runtime/define_primitive_type.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
@@ -105,8 +102,8 @@ private:
     WrappedPtr data;
     size_t s;
 
-    ColumnConst(const ColumnPtr& data, size_t s_);
-    ColumnConst(const ColumnPtr& data, size_t s_, bool create_with_empty);
+    ColumnConst(const ColumnPtr& data, size_t s_, bool create_with_empty = false,
+                bool need_squash = true);
     ColumnConst(const ColumnConst& src) = default;
 
 public:
@@ -123,7 +120,7 @@ public:
     void resize(size_t new_size) override { s = new_size; }
 
     MutableColumnPtr clone_resized(size_t new_size) const override {
-        return ColumnConst::create(data, new_size);
+        return ColumnConst::create(data, new_size, false, false);
     }
 
     size_t size() const override { return s; }
@@ -140,16 +137,31 @@ public:
 
     bool is_null_at(size_t) const override { return data->is_null_at(0); }
 
-    void insert_range_from(const IColumn&, size_t /*start*/, size_t length) override {
+    void insert_range_from(const IColumn& src, size_t /*start*/, size_t length) override {
+        if (!is_column_const(src) || compare_at(0, 0, src, 0) != 0) {
+            throw Exception(
+                    ErrorCode::INTERNAL_ERROR,
+                    "ColumnConst::insert_indices_from: src is not const or not equal to dst");
+        }
         s += length;
     }
 
     void insert_many_from(const IColumn& src, size_t position, size_t length) override {
+        if (!is_column_const(src) || compare_at(0, 0, src, 0) != 0) {
+            throw Exception(
+                    ErrorCode::INTERNAL_ERROR,
+                    "ColumnConst::insert_indices_from: src is not const or not equal to dst");
+        }
         s += length;
     }
 
     void insert_indices_from(const IColumn& src, const uint32_t* indices_begin,
                              const uint32_t* indices_end) override {
+        if (!is_column_const(src) || compare_at(0, 0, src, 0) != 0) {
+            throw Exception(
+                    ErrorCode::INTERNAL_ERROR,
+                    "ColumnConst::insert_indices_from: src is not const or not equal to dst");
+        }
         s += (indices_end - indices_begin);
     }
 
@@ -157,7 +169,14 @@ public:
 
     void insert_data(const char*, size_t) override { ++s; }
 
-    void insert_from(const IColumn&, size_t) override { ++s; }
+    void insert_from(const IColumn& src, size_t) override {
+        if (!is_column_const(src) || compare_at(0, 0, src, 0) != 0) {
+            throw Exception(
+                    ErrorCode::INTERNAL_ERROR,
+                    "ColumnConst::insert_indices_from: src is not const or not equal to dst");
+        }
+        ++s;
+    }
 
     void clear() override { s = 0; }
 
@@ -178,21 +197,18 @@ public:
 
     size_t get_max_row_byte_size() const override { return data->get_max_row_byte_size(); }
 
-    void serialize_vec(StringRef* keys, size_t num_rows) const override {
+    void serialize(StringRef* keys, size_t num_rows) const override {
         DCHECK_EQ(data->size(), 1);
         for (size_t i = 0; i < num_rows; i++) {
+            // Used in hash_map_context.h, this address is allocated via Arena,
+            // but passed through StringRef, so using const_cast is acceptable.
             serialize_impl(const_cast<char*>(keys[i].data + keys[i].size), i);
         }
     }
 
     void update_xxHash_with_value(size_t start, size_t end, uint64_t& hash,
                                   const uint8_t* __restrict null_data) const override {
-        auto real_data = data->get_data_at(0);
-        if (real_data.data == nullptr) {
-            hash = HashUtil::xxHash64NullWithSeed(hash);
-        } else {
-            hash = HashUtil::xxHash64WithSeed(real_data.data, real_data.size, hash);
-        }
+        data->update_xxHash_with_value(0, 1, hash, null_data);
     }
 
     void update_crc_with_value(size_t start, size_t end, uint32_t& hash,
@@ -206,8 +222,6 @@ public:
 
     ColumnPtr filter(const Filter& filt, ssize_t result_size_hint) const override;
     size_t filter(const Filter& filter) override;
-
-    ColumnPtr replicate(const Offsets& offsets) const override;
 
     MutableColumnPtr permute(const Permutation& perm, size_t limit) const override;
     // ColumnPtr index(const IColumn & indexes, size_t limit) const override;
@@ -255,8 +269,6 @@ public:
     StringRef get_raw_data() const override { return data->get_raw_data(); }
 
     /// Not part of the common interface.
-
-    IColumn& get_data_column() { return *data; }
     const IColumn& get_data_column() const { return *data; }
     const ColumnPtr& get_data_column_ptr() const { return data; }
 
@@ -269,8 +281,8 @@ public:
     }
 
     void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
-        DCHECK(size() > self_row);
-        data->replace_column_data(rhs, row, self_row);
+        throw Exception(ErrorCode::NOT_IMPLEMENTED_ERROR,
+                        "Method replace_column_data is not supported for " + get_name());
     }
 
     void finalize() override { data->finalize(); }
@@ -293,6 +305,8 @@ public:
         ++s;
         return data->deserialize_impl(pos);
     }
+
+    void replace_float_special_values() override;
 };
 
 // For example, DataType may not correspond to a type and const,

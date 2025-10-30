@@ -33,6 +33,7 @@
 #include "common/status.h"
 #include "exprs/function_filter.h"
 #include "io/io_common.h"
+#include "olap/base_tablet.h"
 #include "olap/delete_handler.h"
 #include "olap/filter_olap_param.h"
 #include "olap/iterators.h"
@@ -91,12 +92,6 @@ class TabletReader {
     };
 
 public:
-    struct ReadSource {
-        std::vector<RowSetSplits> rs_splits;
-        std::vector<RowsetMetaSharedPtr> delete_predicates;
-        // Fill delete predicates with `rs_splits`
-        void fill_delete_predicates();
-    };
     // Params for Reader,
     // mainly include tablet, data version and fetch range.
     struct ReaderParams {
@@ -117,9 +112,14 @@ public:
             return BeExecVersionManager::get_newest_version();
         }
 
-        void set_read_source(ReadSource read_source) {
+        void set_read_source(TabletReadSource read_source, bool skip_delete_bitmap = false) {
             rs_splits = std::move(read_source.rs_splits);
             delete_predicates = std::move(read_source.delete_predicates);
+#ifndef BE_TEST
+            if (tablet->enable_unique_key_merge_on_write() && !skip_delete_bitmap) {
+                delete_bitmap = std::move(read_source.delete_bitmap);
+            }
+#endif
         }
 
         BaseTabletSPtr tablet;
@@ -144,11 +144,11 @@ public:
         std::vector<FunctionFilter> function_filters;
         std::vector<RowsetMetaSharedPtr> delete_predicates;
         // slots that cast may be eliminated in storage layer
-        std::map<std::string, PrimitiveType> target_cast_type_for_variants;
+        std::map<std::string, vectorized::DataTypePtr> target_cast_type_for_variants;
 
         std::vector<RowSetSplits> rs_splits;
         // For unique key table with merge-on-write
-        DeleteBitmap* delete_bitmap = nullptr;
+        DeleteBitmapPtr delete_bitmap = nullptr;
 
         // return_columns is init from query schema
         std::vector<ColumnId> return_columns;
@@ -198,6 +198,12 @@ public:
         std::map<ColumnId, vectorized::VExprContextSPtr> virtual_column_exprs;
         std::map<ColumnId, size_t> vir_cid_to_idx_in_block;
         std::map<size_t, vectorized::DataTypePtr> vir_col_idx_to_type;
+
+        std::shared_ptr<vectorized::ScoreRuntime> score_runtime;
+        CollectionStatisticsPtr collection_statistics;
+        std::shared_ptr<segment_v2::AnnTopNRuntime> ann_topn_runtime;
+
+        uint64_t condition_cache_digest = 0;
     };
 
     TabletReader() = default;

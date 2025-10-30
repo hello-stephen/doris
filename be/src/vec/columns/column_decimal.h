@@ -34,7 +34,6 @@
 #include "vec/columns/column.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/cow.h"
-#include "vec/common/pod_array.h"
 #include "vec/common/pod_array_fwd.h"
 #include "vec/common/string_ref.h"
 #include "vec/common/typeid_cast.h"
@@ -86,6 +85,7 @@ private:
     friend class COWHelper<IColumn, Self>;
 
 public:
+    // value_type is decimal32/64/128/256 type
     using value_type =
             typename PrimitiveTypeTraits<T>::ColumnItemType; //TODO: replace with ValueType
     using CppNativeType = typename PrimitiveTypeTraits<T>::CppNativeType;
@@ -162,9 +162,9 @@ public:
 
     size_t get_max_row_byte_size() const override;
 
-    void serialize_vec(StringRef* keys, size_t num_rows) const override;
+    void serialize(StringRef* keys, size_t num_rows) const override;
 
-    void deserialize_vec(StringRef* keys, const size_t num_rows) override;
+    void deserialize(StringRef* keys, const size_t num_rows) override;
 
     void update_hash_with_value(size_t n, SipHash& hash) const override;
     void update_hashes_with_value(uint64_t* __restrict hashes,
@@ -193,7 +193,6 @@ public:
         return StringRef(reinterpret_cast<const char*>(&data[n]), sizeof(data[n]));
     }
     void get(size_t n, Field& res) const override { res = (*this)[n]; }
-    bool get_bool(size_t n) const override { return bool(data[n]); }
     Int64 get_int(size_t n) const override { return Int64(data[n].value * scale); }
 
     void clear() override { data.clear(); }
@@ -203,10 +202,6 @@ public:
     size_t filter(const IColumn::Filter& filter) override;
 
     MutableColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override;
-
-    ColumnPtr replicate(const IColumn::Offsets& offsets) const override;
-
-    //    void gather(ColumnGathererStream & gatherer_stream) override;
 
     bool structure_equals(const IColumn& rhs) const override {
         if (auto rhs_concrete = typeid_cast<const ColumnDecimal<T>*>(&rhs))
@@ -236,10 +231,8 @@ public:
 
     UInt32 get_scale() const { return scale; }
 
-    //TODO: use CppNativeType instead of value_type
-    value_type get_scale_multiplier() const;
-    CppNativeType get_intergral_part(size_t n) const { return data[n] / get_scale_multiplier(); }
-    CppNativeType get_fractional_part(size_t n) const { return data[n] % get_scale_multiplier(); }
+    CppNativeType get_intergral_part(size_t n) const;
+    CppNativeType get_fractional_part(size_t n) const;
 
     void erase(size_t start, size_t length) override {
         if (start >= data.size() || length == 0) {
@@ -254,6 +247,10 @@ public:
     size_t serialize_impl(char* pos, const size_t row) const override;
     size_t deserialize_impl(const char* pos) override;
     size_t serialize_size_at(size_t row) const override { return sizeof(value_type); }
+    void serialize_with_nullable(StringRef* keys, size_t num_rows, const bool has_null,
+                                 const uint8_t* __restrict null_map) const override;
+    void deserialize_with_nullable(StringRef* keys, const size_t num_rows,
+                                   PaddedPODArray<UInt8>& null_map) override;
 
 protected:
     Container data;

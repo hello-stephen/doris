@@ -232,29 +232,6 @@ public:
         return res;
     }
 
-    ColumnPtr replicate(const IColumn::Offsets& offsets) const override {
-        size_t size = _item_count;
-        column_match_offsets_size(size, offsets.size());
-        auto res = doris::vectorized::ColumnFixedLengthObject::create(_item_size);
-        if (0 == size) {
-            return res;
-        }
-        res->resize(offsets.back());
-        typename Self::Container& res_data = res->get_data();
-
-        IColumn::Offset prev_offset = 0;
-        for (size_t i = 0; i < size; ++i) {
-            size_t size_to_replicate = offsets[i] - prev_offset;
-            for (size_t j = 0; j < size_to_replicate; ++j) {
-                memcpy(&res_data[(prev_offset + j) * _item_size], &_data[i * _item_size],
-                       _item_size);
-            }
-            prev_offset = offsets[i];
-        }
-
-        return res;
-    }
-
     size_t byte_size() const override { return _data.size(); }
 
     size_t item_size() const { return _item_size; }
@@ -291,7 +268,7 @@ public:
         const auto begin_offset = offsets[0];
         const size_t total_mem_size = offsets[num] - begin_offset;
         resize(old_size + num);
-        memcpy(_data.data() + old_size, data + begin_offset, total_mem_size);
+        memcpy(&_data[old_size * _item_size], data + begin_offset, total_mem_size);
     }
 
     void insert_many_strings(const StringRef* strings, size_t num) override {
@@ -303,8 +280,8 @@ public:
         resize(old_count + num);
         auto* dst = _data.data() + old_count * _item_size;
         for (size_t i = 0; i < num; i++) {
-            dst += i * _item_size;
             memcpy(dst, strings[i].data, strings[i].size);
+            dst += _item_size;
         }
     }
 

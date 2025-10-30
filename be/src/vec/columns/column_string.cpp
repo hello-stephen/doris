@@ -459,8 +459,10 @@ size_t ColumnStr<T>::get_max_row_byte_size() const {
 }
 
 template <typename T>
-void ColumnStr<T>::serialize_vec(StringRef* keys, size_t num_rows) const {
+void ColumnStr<T>::serialize(StringRef* keys, size_t num_rows) const {
     for (size_t i = 0; i < num_rows; ++i) {
+        // Used in hash_map_context.h, this address is allocated via Arena,
+        // but passed through StringRef, so using const_cast is acceptable.
         keys[i].size += serialize_impl(const_cast<char*>(keys[i].data + keys[i].size), i);
     }
 }
@@ -476,7 +478,7 @@ size_t ColumnStr<T>::serialize_impl(char* pos, const size_t row) const {
 }
 
 template <typename T>
-void ColumnStr<T>::deserialize_vec(StringRef* keys, const size_t num_rows) {
+void ColumnStr<T>::deserialize(StringRef* keys, const size_t num_rows) {
     for (size_t i = 0; i != num_rows; ++i) {
         auto sz = deserialize_impl(keys[i].data);
         keys[i].data += sz;
@@ -498,6 +500,49 @@ size_t ColumnStr<T>::deserialize_impl(const char* pos) {
     offsets.push_back(new_size);
     sanity_check_simple();
     return string_size + sizeof(string_size);
+}
+
+template <typename T>
+void ColumnStr<T>::serialize_with_nullable(StringRef* keys, size_t num_rows, const bool has_null,
+                                           const uint8_t* __restrict null_map) const {
+    if (has_null) {
+        for (size_t i = 0; i < num_rows; ++i) {
+            char* dest = const_cast<char*>(keys[i].data + keys[i].size);
+            keys[i].size += sizeof(UInt8);
+            if (null_map[i]) {
+                // is null
+                *dest = true;
+                continue;
+            }
+            // not null
+            *dest = false;
+            keys[i].size += serialize_impl(dest + sizeof(UInt8), i);
+        }
+    } else {
+        for (size_t i = 0; i < num_rows; ++i) {
+            char* dest = const_cast<char*>(keys[i].data + keys[i].size);
+            *dest = false;
+            keys[i].size += serialize_impl(dest + sizeof(UInt8), i) + sizeof(UInt8);
+        }
+    }
+}
+
+template <typename T>
+void ColumnStr<T>::deserialize_with_nullable(StringRef* keys, const size_t num_rows,
+                                             PaddedPODArray<UInt8>& null_map) {
+    for (size_t i = 0; i != num_rows; ++i) {
+        UInt8 is_null = *reinterpret_cast<const UInt8*>(keys[i].data);
+        null_map.push_back(is_null);
+        keys[i].data += sizeof(UInt8);
+        keys[i].size -= sizeof(UInt8);
+        if (is_null) {
+            insert_default();
+            continue;
+        }
+        auto sz = deserialize_impl(keys[i].data);
+        keys[i].data += sz;
+        keys[i].size -= sz;
+    }
 }
 
 template <typename T>
@@ -528,44 +573,6 @@ void ColumnStr<T>::get_permutation(bool reverse, size_t limit, int /*nan_directi
     } else {
         pdqsort(res.begin(), res.end(), less<true>(*this));
     }
-}
-
-template <typename T>
-ColumnPtr ColumnStr<T>::replicate(const IColumn::Offsets& replicate_offsets) const {
-    size_t col_size = size();
-    column_match_offsets_size(col_size, replicate_offsets.size());
-
-    auto res = ColumnStr<T>::create();
-
-    if (0 == col_size) {
-        return res;
-    }
-
-    Chars& res_chars = res->chars;
-    auto& res_offsets = res->offsets;
-    res_chars.reserve(chars.size() / col_size * replicate_offsets.back());
-    res_offsets.reserve(replicate_offsets.back());
-
-    T current_new_offset = 0;
-    for (size_t i = 0; i < col_size; ++i) {
-        size_t size_to_replicate = replicate_offsets[i] - replicate_offsets[i - 1];
-        T string_size = offsets[i] - offsets[i - 1];
-
-        check_chars_length(res_chars.size() + size_to_replicate * string_size,
-                           res_offsets.size() + size_to_replicate, col_size);
-
-        res_chars.resize(res_chars.size() + size_to_replicate * string_size);
-        for (size_t j = 0; j < size_to_replicate; ++j) {
-            memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset],
-                                                     &chars[offsets[i - 1]], string_size);
-            current_new_offset += string_size;
-            res_offsets.push_back(current_new_offset);
-        }
-    }
-
-    check_chars_length(res_chars.size(), res_offsets.size(), col_size);
-    sanity_check_simple();
-    return res;
 }
 
 template <typename T>

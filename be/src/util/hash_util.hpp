@@ -28,8 +28,8 @@
 #include <functional>
 
 #include "common/compiler_util.h" // IWYU pragma: keep
-#include "gutil/hash/city.h"
 #include "util/cpu_info.h"
+#include "util/hash/city.h"
 #include "util/murmur_hash3.h"
 #include "util/sse_util.hpp"
 
@@ -129,6 +129,17 @@ public:
     static uint32_t murmur_hash3_32(const void* key, int64_t len, uint32_t seed) {
         uint32_t out = 0;
         murmur_hash3_x86_32(key, len, seed, &out);
+        return out;
+    }
+
+    template <bool is_mmh64_v2>
+    static uint64_t murmur_hash3_64(const void* key, int64_t len, uint64_t seed) {
+        uint64_t out = 0;
+        if constexpr (is_mmh64_v2) {
+            murmur_hash3_x64_64_shared(key, len, seed, &out);
+        } else {
+            murmur_hash3_x64_64(key, len, seed, &out);
+        }
         return out;
     }
 
