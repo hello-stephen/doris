@@ -45,7 +45,7 @@ jobs:
         COMMENT_BODY=$(echo "${COMMENT_BODY}" | xargs)
         PULL_REQUEST_NUM="$(echo "${{ github.event.issue.pull_request.url }}" | awk -F/ '{print $NF}')"
         COMMIT_ID_FROM_TRIGGER="$(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" | jq -r '.head.sha')"
-        TARGET_BRANCH="$(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" | jq -r '.base.ref')"
+        TARGET_BRANCH=$(curl -s -H "Authorization:Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/pulls/${PULL_REQUEST_NUM}" | jq -r '.base.ref')
         if [[ "${COMMENT_BODY}" == *'run buildall'* ||
             "${COMMENT_BODY}" == *'run compile'* ||
             "${COMMENT_BODY}" == *'run beut'* ||
