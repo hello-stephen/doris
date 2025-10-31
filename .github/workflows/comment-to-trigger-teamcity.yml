@@ -416,6 +416,9 @@ jobs:
           "performance" \
           "${{ steps.parse.outputs.COMMENT_REPEAT_TIMES }}"
 
+    - name: "Setup tmate session"
+          uses: mxschmitt/action-tmate@v3
+
     - name: "Skip buildall"
       if: ${{ fromJSON(steps.parse.outputs.comment_skip) }}
       run: |
